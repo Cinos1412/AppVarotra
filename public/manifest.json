@@ -1,0 +1,13 @@
+{
+  "name": "App'Varotra",
+  "short_name": "Varotra",
+  "description": "Le marché social malgache",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A1F1B",
+  "theme_color": "#146356",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
