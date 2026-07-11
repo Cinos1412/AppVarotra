@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { GlassButton } from "@/components/ui/glass-button";
 import { GlassPanel } from "@/components/ui/glass-panel";
-import { Star, ShieldCheck, Zap } from "lucide-react";
+import { StatChip } from "@/components/ui/stat-chip";
+import { Star, ShieldCheck, Zap, Share2, Pencil, MessageCircle, Users } from "lucide-react";
 
 export function ProfileHeader({ profile, currentUserId }: { profile: any; currentUserId?: string }) {
   const follow = useMutation(api.users.follow);
@@ -15,7 +17,9 @@ export function ProfileHeader({ profile, currentUserId }: { profile: any; curren
     api.users.isFollowing,
     currentUserId ? { followerId: currentUserId as any, followingId: profile._id } : "skip",
   );
+  const getOrCreateConversation = useMutation(api.conversations.getOrCreate);
   const [optimistic, setOptimistic] = useState<boolean | null>(null);
+  const [copied, setCopied] = useState(false);
   const isFollowing = optimistic ?? isFollowingQuery ?? false;
   const isSelf = currentUserId === profile._id;
 
@@ -29,10 +33,34 @@ export function ProfileHeader({ profile, currentUserId }: { profile: any; curren
     }
   }
 
+  async function handleShare() {
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: profile.displayName, url });
+      } catch {
+        /* annulé */
+      }
+    } else {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }
+
+  async function handleMessage() {
+    if (!currentUserId) return;
+    const conversationId = await getOrCreateConversation({
+      buyerId: currentUserId as any,
+      sellerId: profile._id,
+    });
+    window.location.href = `/messages/${conversationId}`;
+  }
+
   return (
     <GlassPanel className="p-6" intensity="strong">
       <div className="flex items-start gap-4">
-        <div className="ravinala-ring p-[3px] rounded-full h-20 w-20 shrink-0">
+        <div className="ravinala-ring p-[3px] rounded-full h-20 w-20 shrink-0 animate-float-subtle">
           <div className="h-full w-full rounded-full border-2 border-ink overflow-hidden bg-ink-soft">
             {profile.avatarUrl && (
               <Image src={profile.avatarUrl} alt={profile.displayName} width={80} height={80} className="object-cover h-full w-full" />
@@ -47,30 +75,44 @@ export function ProfileHeader({ profile, currentUserId }: { profile: any; curren
             {profile.boostActive && <Zap className="h-4 w-4 text-vanille shrink-0" />}
           </div>
           <p className="text-white/50 text-sm">@{profile.username} · {profile.location}</p>
-
-          <div className="flex items-center gap-4 mt-2.5 text-sm">
-            <span><b>{profile.followersCount}</b> <span className="text-white/50">abonnés</span></span>
-            <span><b>{profile.followingCount}</b> <span className="text-white/50">suivis</span></span>
-            <span className="flex items-center gap-1">
-              <Star className="h-3.5 w-3.5 fill-vanille text-vanille" />
-              <b>{profile.ratingAvg.toFixed(1)}</b>
-              <span className="text-white/50">({profile.ratingCount})</span>
-            </span>
-          </div>
-
-          {profile.bio && <p className="text-sm text-white/70 mt-2.5">{profile.bio}</p>}
+          {profile.bio && <p className="text-sm text-white/70 mt-2 leading-relaxed">{profile.bio}</p>}
         </div>
+
+        <button onClick={handleShare} className="relative h-9 w-9 rounded-full glass flex items-center justify-center shrink-0">
+          <Share2 className="h-3.5 w-3.5" />
+          {copied && (
+            <span className="absolute -top-8 right-0 text-[10px] bg-ink-soft px-2 py-1 rounded-lg whitespace-nowrap">
+              Lien copié !
+            </span>
+          )}
+        </button>
       </div>
 
-      {!isSelf && (
-        <GlassButton
-          variant={isFollowing ? "glass" : "primary"}
-          className="w-full mt-5"
-          onClick={toggleFollow}
-        >
-          {isFollowing ? "Abonné" : "Suivre"}
-        </GlassButton>
-      )}
+      {/* Stats — chips façon dashboard, remplace le texte brut */}
+      <div className="flex flex-wrap gap-2.5 mt-5">
+        <StatChip icon={Users} value={profile.followersCount} label="abonnés" tone="malachite" />
+        <StatChip value={profile.followingCount} label="suivis" tone="neutral" />
+        <StatChip icon={Star} value={profile.ratingAvg.toFixed(1)} label={`(${profile.ratingCount} avis)`} tone="vanille" />
+      </div>
+
+      <div className="flex gap-2.5 mt-5">
+        {isSelf ? (
+          <Link href="/onboarding" className="flex-1">
+            <GlassButton variant="glass" className="w-full">
+              <Pencil className="h-3.5 w-3.5" /> Modifier mon profil
+            </GlassButton>
+          </Link>
+        ) : (
+          <>
+            <GlassButton variant={isFollowing ? "glass" : "primary"} className="flex-1" onClick={toggleFollow}>
+              {isFollowing ? "Abonné" : "Suivre"}
+            </GlassButton>
+            <GlassButton variant="glass" className="flex-1" onClick={handleMessage} disabled={!currentUserId}>
+              <MessageCircle className="h-3.5 w-3.5" /> Message
+            </GlassButton>
+          </>
+        )}
+      </div>
     </GlassPanel>
   );
 }

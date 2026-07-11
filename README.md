@@ -65,7 +65,23 @@ Une fois `npx convex dev` lancé, ouvre le dashboard Convex → onglet
 **Functions** → `seed:run` → **Run**. Ça crée un vendeur, un acheteur, quatre
 articles et une story, pour voir l'UI sans passer par l'inscription complète.
 
-## Compression d'image
+## Cartes "premium" vs liquid glass
+
+Deux langages visuels cohabitent volontairement :
+- **Liquid glass** (`GlassPanel`, `.glass`) : chrome de l'app — nav, CTA,
+  anneaux de story, badges. Flouté, translucide.
+- **Premium** (`PremiumCard`, `.premium-card`) : contenu dense où la
+  lisibilité prime — description produit, bloc vendeur, avis. Surface
+  opaque, bord net, pas de flou. `StatChip` (chiffre en gras + libellé,
+  fond plat coloré) et `AvatarStack` complètent ce langage.
+
+La page produit (`app/product/[id]/page.tsx`) a été refaite avec une vraie
+galerie cliquable/swipeable (`components/products/product-gallery.tsx` —
+miniatures, indicateurs, plein écran tactile), une description dépliable,
+un bloc vendeur avec bouton "Contacter" direct, un bouton de partage
+(`navigator.share` avec repli presse-papier), et un carrousel "articles
+similaires". Le profil a les mêmes ajouts : onglets Articles/Avis, partage,
+message direct, édition rapide pour soi-même.
 
 `lib/compress-image.ts` redimensionne et ré-encode en JPEG côté client avant
 tout upload (canvas, aucune dépendance externe) :

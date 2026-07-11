@@ -84,7 +84,30 @@ body {
   background: conic-gradient(from 0deg, #2fa88f, #f2c879, #ff6f59, #2fa88f);
 }
 
-/* Bandeaux horizontaux (stories, filtres catégories) sans scrollbar visible */
+/* ------------------------------------------------------------------ */
+/* Cartes "premium" — volontairement SANS flou/transparence, pour les    */
+/* zones de contenu dense (description produit, bloc vendeur, stats).   */
+/* Surface opaque, bord net, ombre franche : lisibilité avant tout.     */
+/* ------------------------------------------------------------------ */
+.premium-card {
+  background: linear-gradient(165deg, #123028 0%, #0e2620 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.06) inset, 0 12px 32px -12px rgba(0, 0, 0, 0.5);
+}
+
+.premium-card-dark {
+  background: #0a1815;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Chip stat façon dashboard : nombre en gras + libellé, fond plat coloré */
+.stat-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  border-radius: 0.875rem;
+  padding: 0.625rem 0.875rem;
+}
 .no-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
