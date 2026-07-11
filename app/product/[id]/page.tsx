@@ -2,14 +2,11 @@
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import { GlassButton } from "@/components/ui/glass-button";
-import { GlassPanel } from "@/components/ui/glass-panel";
-import { formatAriary } from "@/lib/utils";
-import { Star, MapPin, ShieldCheck } from "lucide-react";
-import Link from "next/link";
 import { useCurrentUser } from "@/lib/use-current-user";
+import { ProductImageGallery } from "@/components/products/product-image-gallery";
+import { ProductDetails } from "@/components/products/product-details";
+import { ProductActionButtons } from "@/components/products/product-action-buttons";
 
 export default function ProductPage() {
   const params = useParams<{ id: string }>();
@@ -29,68 +26,75 @@ export default function ProductPage() {
     router.push(`/checkout?conversationId=${conversationId}&productId=${product._id}`);
   }
 
-  if (product === undefined) {
-    return <div className="animate-pulse h-96 rounded-3xl bg-white/[0.05]" />;
+  async function handleAddToCart() {
+    if (!userId || !product) return;
+    await addToCart({ userId: userId as any, productId: product._id });
   }
+
+  if (product === undefined) {
+    return (
+      <div className="grid md:grid-cols-2 gap-8">
+        <div className="aspect-square rounded-4xl bg-white/[0.05] animate-pulse" />
+        <div className="space-y-4">
+          <div className="h-12 bg-white/[0.05] rounded-2xl animate-pulse" />
+          <div className="h-20 bg-white/[0.05] rounded-2xl animate-pulse" />
+          <div className="h-32 bg-white/[0.05] rounded-2xl animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
   if (product === null) {
-    return <p className="text-white/60">Cet article n'existe plus.</p>;
+    return (
+      <div className="glass rounded-3xl p-8 text-center">
+        <p className="text-white/60 text-lg">Cet article n'existe plus.</p>
+        <p className="text-white/40 text-sm mt-2">Il a peut-être déjà été vendu ou supprimé.</p>
+      </div>
+    );
   }
 
   return (
-    <div className="grid md:grid-cols-2 gap-8">
-      <div className="relative aspect-square rounded-4xl overflow-hidden glass">
-        <Image src={product.images[0]} alt={product.title} fill className="object-cover" priority />
+    <div className="space-y-8 animate-fade-in">
+      {/* Main Product Section */}
+      <div className="grid md:grid-cols-2 gap-8 md:gap-12">
+        {/* Image Gallery */}
+        <div className="animate-slide-in-left">
+          <ProductImageGallery images={product.images} title={product.title} />
+        </div>
+
+        {/* Product Details and Actions */}
+        <div className="animate-slide-in-right">
+          <div className="sticky top-24 space-y-6">
+            <ProductDetails product={product} />
+
+            <div className="h-px bg-gradient-to-r from-white/10 via-white/30 to-white/10" />
+
+            <ProductActionButtons
+              onAddToCart={handleAddToCart}
+              onBuyNow={handleBuyNow}
+              disabled={!userId}
+              isLoading={false}
+            />
+          </div>
+        </div>
       </div>
 
-      <div className="space-y-5">
-        <div>
-          <h1 className="font-display text-2xl">{product.title}</h1>
-          <p className="font-display text-3xl text-vanille mt-1">{formatAriary(product.price)}</p>
+      {/* Additional Info Section */}
+      <div className="grid md:grid-cols-3 gap-4 pt-8">
+        <div className="glass rounded-3xl p-6 text-center hover:bg-white/[0.08] transition-all duration-300">
+          <div className="text-2xl mb-2">🚚</div>
+          <p className="text-sm font-medium text-white">Livraison rapide</p>
+          <p className="text-xs text-white/50 mt-1">Partout à Madagascar</p>
         </div>
-
-        <p className="text-white/70 text-sm leading-relaxed">{product.description}</p>
-
-        <div className="flex items-center gap-4 text-sm text-white/55">
-          <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {product.location}</span>
-          <span>{product.state}</span>
+        <div className="glass rounded-3xl p-6 text-center hover:bg-white/[0.08] transition-all duration-300">
+          <div className="text-2xl mb-2">🛡️</div>
+          <p className="text-sm font-medium text-white">Paiement sécurisé</p>
+          <p className="text-xs text-white/50 mt-1">Protection garantie</p>
         </div>
-
-        {product.seller && (
-          <Link href={`/profile/${product.seller.username}`}>
-            <GlassPanel className="p-4 flex items-center gap-3">
-              <div className="ravinala-ring p-[2px] rounded-full h-11 w-11">
-                <div className="h-full w-full rounded-full border border-ink overflow-hidden bg-ink-soft">
-                  {product.seller.avatarUrl && (
-                    <Image src={product.seller.avatarUrl} alt="" width={44} height={44} className="object-cover" />
-                  )}
-                </div>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm flex items-center gap-1 truncate">
-                  {product.seller.displayName}
-                  {product.seller.isVerified && <ShieldCheck className="h-3.5 w-3.5 text-ravinala shrink-0" />}
-                </p>
-                <p className="text-xs text-white/50 flex items-center gap-1">
-                  <Star className="h-3 w-3 fill-vanille text-vanille" /> {product.seller.ratingAvg.toFixed(1)} · {product.seller.salesCount} ventes
-                </p>
-              </div>
-            </GlassPanel>
-          </Link>
-        )}
-
-        <div className="flex gap-3 pt-2">
-          <GlassButton
-            variant="glass"
-            size="lg"
-            className="flex-1"
-            disabled={!userId}
-            onClick={() => userId && addToCart({ userId: userId as any, productId: product._id })}
-          >
-            Ajouter au panier
-          </GlassButton>
-          <GlassButton variant="primary" size="lg" className="flex-1" disabled={!userId} onClick={handleBuyNow}>
-            Acheter maintenant
-          </GlassButton>
+        <div className="glass rounded-3xl p-6 text-center hover:bg-white/[0.08] transition-all duration-300">
+          <div className="text-2xl mb-2">📞</div>
+          <p className="text-sm font-medium text-white">Support 24/7</p>
+          <p className="text-xs text-white/50 mt-1">Nous sommes là pour vous</p>
         </div>
       </div>
     </div>
