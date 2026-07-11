@@ -77,7 +77,7 @@ export function StoryViewer({
   if (!story) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
+    <div className="fixed inset-0 z-50 bg-black flex items-center justify-center animate-fade-in">
       <button onClick={onClose} className="absolute top-5 right-5 z-10 text-white/80 hover:text-white">
         <X className="h-7 w-7" />
       </button>

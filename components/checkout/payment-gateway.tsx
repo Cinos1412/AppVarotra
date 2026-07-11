@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAction, useMutation, useQuery, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { GlassButton } from "@/components/ui/glass-button";
 import { GlassPanel } from "@/components/ui/glass-panel";
 import { formatAriary, cn } from "@/lib/utils";
+import { compressImage } from "@/lib/compress-image";
 import { Copy, Check, Upload, ShieldCheck, Loader2 } from "lucide-react";
 
 const OPERATORS = [
@@ -36,6 +37,26 @@ export function PaymentGateway({
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
+  const [justReturned, setJustReturned] = useState(false);
+  const leftToDialRef = useRef(false);
+
+  // Détecte le retour dans l'app après avoir composé le code (l'onglet perd
+  // le focus quand le composeur téléphone s'ouvre par-dessus). On ne peut
+  // toujours pas savoir si le virement a réussi, mais on peut au moins
+  // enchaîner automatiquement sur l'étape de preuve pour que ça reste fluide.
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.hidden) {
+        if (step === "instructions") leftToDialRef.current = true;
+      } else if (leftToDialRef.current && step === "instructions") {
+        leftToDialRef.current = false;
+        setJustReturned(true);
+        setStep("submit_proof");
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [step]);
 
   const initiate = useMutation(api.escrow.initiate);
   const submitProof = useMutation(api.escrow.submitProof);
@@ -78,8 +99,13 @@ export function PaymentGateway({
     if (!escrowId) return;
     setUploadingScreenshot(true);
 
+    // Compression plus légère qu'ailleurs : un reçu Mobile Money contient du
+    // texte fin (montant, référence) que Gemini doit pouvoir lire — mieux
+    // vaut garder plus de netteté que sur une simple photo produit.
+    const compressed = await compressImage(file, { maxDimension: 2000, quality: 0.9 });
+
     const uploadUrl = await generateUploadUrl();
-    const result = await fetch(uploadUrl, { method: "POST", headers: { "Content-Type": file.type }, body: file });
+    const result = await fetch(uploadUrl, { method: "POST", headers: { "Content-Type": compressed.type }, body: compressed });
     const { storageId } = await result.json();
     const screenshotUrl = await convex.query(api.files.getUrl, { storageId });
 
@@ -116,7 +142,7 @@ export function PaymentGateway({
       </div>
 
       {step === "choose_operator" && (
-        <div className="space-y-2.5">
+        <div className="space-y-2.5 animate-fade-in-up">
           <p className="text-sm text-white/70 mb-1">Choisis ton opérateur Mobile Money :</p>
           {OPERATORS.map((op) => (
             <button
@@ -132,7 +158,7 @@ export function PaymentGateway({
       )}
 
       {step === "instructions" && instructions && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-fade-in-up">
           <div className="rounded-2xl bg-white/[0.06] p-4 space-y-3">
             <Row label="Opérateur" value={OPERATORS.find((o) => o.id === instructions.operator)?.label ?? ""} />
             <Row label="Numéro marchand" value={instructions.merchantNumber} mono />
@@ -149,7 +175,7 @@ export function PaymentGateway({
           {instructions.ussdVerified ? (
             <a
               href={`tel:${encodeURIComponent(instructions.ussdDialCode)}`}
-              className="flex flex-col items-center justify-center gap-1 rounded-2xl bg-gradient-to-br from-malachite-light to-malachite py-4 text-white"
+              className="flex flex-col items-center justify-center gap-1 rounded-2xl bg-gradient-to-br from-malachite-light to-malachite py-4 text-white glow-on-hover animate-pulse-glow"
             >
               <span className="text-sm font-medium">📞 Payer en un tap</span>
               <span className="text-[11px] font-mono opacity-80">{instructions.ussdDialCode}</span>
@@ -186,7 +212,15 @@ export function PaymentGateway({
       )}
 
       {step === "submit_proof" && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-fade-in-up">
+          {justReturned && (
+            <div className="rounded-2xl bg-ravinala/10 border border-ravinala/25 px-4 py-3 flex items-center gap-2.5 animate-slide-up">
+              <span className="text-lg">👋</span>
+              <p className="text-sm text-ravinala">
+                Content de te revoir ! Alors, le virement est passé ?
+              </p>
+            </div>
+          )}
           {error && <p className="text-corail text-sm">{error}</p>}
           <div>
             <label className="text-sm text-white/70 mb-1.5 block">ID de transaction reçu par SMS</label>
@@ -225,15 +259,15 @@ export function PaymentGateway({
       )}
 
       {step === "verifying" && (
-        <div className="flex flex-col items-center gap-3 py-8">
+        <div className="flex flex-col items-center gap-3 py-8 animate-fade-in">
           <Loader2 className="h-8 w-8 animate-spin text-ravinala" />
           <p className="text-white/60 text-sm">Vérification de la preuve en cours...</p>
         </div>
       )}
 
       {step === "in_escrow" && (
-        <div className="flex flex-col items-center gap-3 py-8 text-center">
-          <div className="h-14 w-14 rounded-full bg-ravinala/20 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3 py-8 text-center animate-fade-in-up">
+          <div className="h-14 w-14 rounded-full bg-ravinala/20 flex items-center justify-center animate-pulse-glow">
             <ShieldCheck className="h-7 w-7 text-ravinala" />
           </div>
           <p className="font-display text-lg">Fonds bloqués en séquestre</p>

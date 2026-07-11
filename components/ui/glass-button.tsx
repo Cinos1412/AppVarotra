@@ -12,9 +12,9 @@ interface GlassButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variants = {
   primary:
-    "bg-gradient-to-br from-malachite-light to-malachite text-white border border-white/20 shadow-glass hover:brightness-110",
-  glass: "glass text-white hover:bg-white/[0.12]",
-  ghost: "bg-transparent text-white/70 hover:text-white hover:bg-white/[0.06]",
+    "bg-gradient-to-br from-malachite-light to-malachite text-white border border-white/20 shadow-glass hover:brightness-110 glow-on-hover",
+  glass: "glass text-white hover:bg-white/[0.12] transition-premium",
+  ghost: "bg-transparent text-white/70 hover:text-white hover:bg-white/[0.06] transition-premium",
   danger: "bg-corail/90 text-white border border-white/20 hover:bg-corail",
 };
 

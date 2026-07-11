@@ -21,7 +21,7 @@ export default function InvoicesPage() {
       {invoices.length === 0 ? (
         <GlassPanel className="p-10 text-center text-white/60">Aucune facture pour l'instant.</GlassPanel>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-3 stagger-children">
           {invoices.map((inv) => {
             const isSeller = inv.sellerId === userId;
             return (

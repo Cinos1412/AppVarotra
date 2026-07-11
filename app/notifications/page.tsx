@@ -6,7 +6,7 @@ import { useCurrentUser } from "@/lib/use-current-user";
 import { GlassPanel } from "@/components/ui/glass-panel";
 import { GlassButton } from "@/components/ui/glass-button";
 import { timeAgo, cn } from "@/lib/utils";
-import { Heart, UserPlus, Star, ShieldCheck, Package, Wallet, AlertTriangle, Zap } from "lucide-react";
+import { Heart, UserPlus, Star, ShieldCheck, Package, Wallet, AlertTriangle, Zap, Radio } from "lucide-react";
 
 const ICONS: Record<string, any> = {
   new_follower: UserPlus,
@@ -17,6 +17,7 @@ const ICONS: Record<string, any> = {
   funds_released: Wallet,
   dispute_opened: AlertTriangle,
   boost_expiring: Zap,
+  live_started: Radio,
 };
 
 const LABELS: Record<string, string> = {
@@ -28,6 +29,7 @@ const LABELS: Record<string, string> = {
   funds_released: "Les fonds de votre vente ont été versés.",
   dispute_opened: "Un litige a été ouvert sur une commande.",
   boost_expiring: "Votre boost de visibilité arrive à expiration.",
+  live_started: "est en direct maintenant !",
 };
 
 export default function NotificationsPage() {
@@ -53,7 +55,7 @@ export default function NotificationsPage() {
       {notifications.length === 0 ? (
         <GlassPanel className="p-10 text-center text-white/60">Rien de nouveau pour l'instant.</GlassPanel>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2 stagger-children">
           {notifications.map((n) => {
             const Icon = ICONS[n.type] ?? Heart;
             return (

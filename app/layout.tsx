@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { Topbar } from "@/components/layout/topbar";
+import { MobileHeader } from "@/components/layout/mobile-header";
 
 const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces", weight: ["500", "600"] });
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta" });
@@ -27,7 +28,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <Providers>
           <Topbar />
-          <main className="max-w-6xl mx-auto px-4 md:px-6 pt-6 pb-28 md:pb-16">{children}</main>
+          <main className="max-w-6xl mx-auto px-4 md:px-6 pt-0 md:pt-6 pb-28 md:pb-16">
+            <MobileHeader />
+            {children}
+          </main>
           <BottomNav />
         </Providers>
       </body>

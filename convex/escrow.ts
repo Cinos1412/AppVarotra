@@ -20,20 +20,6 @@ const MERCHANT_NUMBERS_RAW = {
 } as const;
 
 /**
- * Fonction utilitaire pour convertir un ArrayBuffer en chaîne Base64
- * compatible avec l'environnement personnalisé de Convex (sans utiliser Node's Buffer).
- */
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  let binary = "";
-  const bytes = new Uint8Array(buffer);
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
-
-/**
  * Génère un code de description court (numérique), qui remplace le concept
  * de "référence" : il est injecté directement dans le motif du virement
  * (composé dans le code USSD lui-même pour Mvola) plutôt que recopié à la
@@ -47,6 +33,14 @@ function generateReferenceCode() {
 
 /**
  * Compose le code USSD complet, jusqu'à l'écran de mot de passe inclus.
+ *
+ * ⚠️ IMPORTANT : seul le format Mvola (#111*1*2*destinataire*montant*1*motif#)
+ * est confirmé. Les formats Orange Money et Airtel Money ci-dessous sont des
+ * estimations à partir de la structure connue de leurs menus (#144# puis
+ * "Transfert d'argent" ; *436*2*1*1# pour un envoi direct) — PAS vérifiées
+ * chaîne-par-chaîne. Teste-les toi-même avec un petit montant réel avant de
+ * les activer en production. Un mauvais paramètre dans un virement d'argent
+ * peut envoyer les fonds au mauvais endroit.
  */
 function buildUssdDialCode(
   operator: "mvola" | "orange_money" | "airtel_money",
@@ -108,7 +102,7 @@ export const getPaymentInstructions = query({
     return {
       merchantNumber: MERCHANT_NUMBERS[escrow.operator],
       amount: escrow.amount,
-      referenceCode: escrow.referenceCode,
+      referenceCode: escrow.referenceCode, // = la "description" du transfert
       operator: escrow.operator,
       status: escrow.status,
       ussdDialCode: dial.code,
@@ -135,7 +129,15 @@ export const submitProof = mutation({
   },
 });
 
-/** Action Convex : analyse la preuve de paiement via Gemini */
+/**
+ * Action Convex : analyse la preuve de paiement via Gemini (lecture de la
+ * capture d'écran de confirmation Mvola / Orange Money / Airtel Money).
+ * - Cas "screenshot" : on envoie l'image à Gemini avec une consigne stricte
+ *   de sortie JSON, puis on compare montant + référence à ce qui est attendu.
+ * - Cas "transaction_id" : comparaison directe (pas d'OCR nécessaire) — à
+ *   terme, remplaçable par un vrai appel à l'API de réconciliation de
+ *   l'opérateur si tu obtiens un accès marchand.
+ */
 export const parseScreenshotAction = action({
   args: { escrowId: v.id("escrow") },
   handler: async (ctx, { escrowId }): Promise<{ valid: boolean; reason?: string }> => {
@@ -146,6 +148,9 @@ export const parseScreenshotAction = action({
     let referenceMatches = false;
 
     if (escrow.proofType === "transaction_id" && escrow.proofTransactionId) {
+      // Pas d'OCR à faire ici : on se contente d'enregistrer l'ID fourni.
+      // (Une vraie vérification nécessiterait un accès à l'historique de
+      // l'opérateur, indisponible sans API marchand officielle.)
       amountMatches = true;
       referenceMatches = true;
     } else if (escrow.proofType === "screenshot" && escrow.proofScreenshotUrl) {
@@ -177,7 +182,12 @@ export const parseScreenshotAction = action({
   },
 });
 
-/** Envoie l'image à Gemini (gemini-1.5-flash) avec une consigne de sortie JSON stricte */
+/**
+ * Envoie l'image à Gemini (gemini-1.5-flash) avec une consigne de sortie
+ * JSON stricte, pour en extraire le montant et la référence du virement.
+ * Nécessite GEMINI_API_KEY dans les variables d'environnement Convex
+ * (`npx convex env set GEMINI_API_KEY ...`).
+ */
 async function extractReceiptWithGemini(
   imageUrl: string,
 ): Promise<{ amount: number; reference: string } | null> {
@@ -186,9 +196,7 @@ async function extractReceiptWithGemini(
 
   const imageResponse = await fetch(imageUrl);
   const imageBuffer = await imageResponse.arrayBuffer();
-  
-  // Correction ici : utilisation de la fonction utilitaire à la place de Buffer.from()
-  const base64Image = arrayBufferToBase64(imageBuffer);
+  const base64Image = Buffer.from(imageBuffer).toString("base64");
   const mimeType = imageResponse.headers.get("content-type") ?? "image/jpeg";
 
   const response = await fetch(

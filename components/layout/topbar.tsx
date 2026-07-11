@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ShoppingCart, Search, Bell, MessageCircle } from "lucide-react";
+import { ShoppingCart, Search, Bell, MessageCircle, Radio } from "lucide-react";
 import { UserButton } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -27,6 +27,11 @@ export function Topbar() {
         </Link>
 
         <nav className="flex items-center gap-1.5 shrink-0">
+          <Link href="/live">
+            <GlassButton variant="ghost" size="md" className="!px-3">
+              <Radio className="h-5 w-5" />
+            </GlassButton>
+          </Link>
           <Link href="/messages">
             <GlassButton variant="ghost" size="md" className="!px-3">
               <MessageCircle className="h-5 w-5" />

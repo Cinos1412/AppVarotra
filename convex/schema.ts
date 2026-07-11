@@ -263,6 +263,48 @@ export default defineSchema({
   // ---------------------------------------------------------------------
   // Notifications
   // ---------------------------------------------------------------------
+  // ---------------------------------------------------------------------
+  // Live shopping — préparé mais sans fournisseur de streaming branché
+  // (aucun budget pour l'instant : Mux / LiveKit / Cloudflare Stream...)
+  // ---------------------------------------------------------------------
+  liveStreams: defineTable({
+    hostId: v.id("users"),
+    title: v.string(),
+    thumbnailUrl: v.optional(v.string()),
+    status: v.union(v.literal("scheduled"), v.literal("live"), v.literal("ended")),
+    scheduledFor: v.optional(v.number()),
+    startedAt: v.optional(v.number()),
+    endedAt: v.optional(v.number()),
+    viewerCount: v.number(), // approximatif, incrémenté à la connexion
+    peakViewerCount: v.number(),
+    // Provider de streaming à brancher plus tard (Mux, LiveKit, Cloudflare Stream...).
+    // playbackUrl / ingestUrl restent vides tant qu'aucun service n'est connecté.
+    playbackUrl: v.optional(v.string()),
+    ingestUrl: v.optional(v.string()),
+    ingestKey: v.optional(v.string()),
+    provider: v.optional(v.union(v.literal("mux"), v.literal("livekit"), v.literal("cloudflare"))),
+    productIds: v.array(v.id("products")), // articles épinglés, mis en avant pendant le live
+    pinnedProductId: v.optional(v.id("products")), // article actuellement "à l'écran"
+  })
+    .index("by_host", ["hostId"])
+    .index("by_status", ["status"]),
+
+  liveChatMessages: defineTable({
+    streamId: v.id("liveStreams"),
+    userId: v.id("users"),
+    content: v.string(),
+    isPinned: v.boolean(), // ex: question mise en avant par le vendeur
+  }).index("by_stream", ["streamId"]),
+
+  liveViewers: defineTable({
+    streamId: v.id("liveStreams"),
+    userId: v.id("users"),
+    joinedAt: v.number(),
+    leftAt: v.optional(v.number()),
+  })
+    .index("by_stream", ["streamId"])
+    .index("by_stream_user", ["streamId", "userId"]),
+
   notifications: defineTable({
     userId: v.id("users"),
     type: v.union(
@@ -274,6 +316,7 @@ export default defineSchema({
       v.literal("funds_released"),
       v.literal("dispute_opened"),
       v.literal("boost_expiring"),
+      v.literal("live_started"),
     ),
     data: v.any(),
     isRead: v.boolean(),

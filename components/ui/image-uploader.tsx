@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { useMutation, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { compressImage } from "@/lib/compress-image";
 import { Upload, Loader2, X } from "lucide-react";
 import Image from "next/image";
 
@@ -28,11 +29,13 @@ export function ImageUploader({
     setUploading(true);
     setPreview(URL.createObjectURL(file));
 
+    const compressed = await compressImage(file, { maxDimension: 1600, quality: 0.82 });
+
     const uploadUrl = await generateUploadUrl();
     const result = await fetch(uploadUrl, {
       method: "POST",
-      headers: { "Content-Type": file.type },
-      body: file,
+      headers: { "Content-Type": compressed.type },
+      body: compressed,
     });
     const { storageId } = await result.json();
     const url = await convex.query(api.files.getUrl, { storageId });

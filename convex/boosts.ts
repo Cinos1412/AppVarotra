@@ -61,4 +61,5 @@ export const expireOutdatedBoosts = internalMutation({
   args: { userId: v.id("users") }
   handler: async (ctx, { userId }) => {
     const boosts = await ctx.db.query("boosts").withIndex("by_user", (q) => q.eq("userId", userId)).order("desc").collect();
-    return boosts[0] ?? null;}
+    return boosts[0] ?? null;
+  }
