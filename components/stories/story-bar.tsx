@@ -31,8 +31,9 @@ export function StoryBar() {
   const fileRef = useRef<HTMLInputElement>(null);
   const myProducts = useQuery(api.products.bySeller, userId ? { sellerId: userId as any } : "skip");
 
-  const myGroup = groups.find((g) => g.author?._id === userId);
-  const otherGroups = groups.filter((g) => g.author?._id !== userId);
+  // Sécurité TypeScript ajoutée ici pour le filtrage des groupes
+  const myGroup = groups.find((g) => (g.author as any)?._id === userId);
+  const otherGroups = groups.filter((g) => (g.author as any)?._id !== userId);
   const allGroups = myGroup ? [myGroup, ...otherGroups] : otherGroups;
 
   async function handleAddStory(file: File) {
@@ -44,7 +45,7 @@ export function StoryBar() {
     const { storageId } = await result.json();
     const url = await convex.query(api.files.getUrl, { storageId });
     setUploading(false);
-    if (url) setPendingUpload(url); // on attend la confirmation (avec article lié en option) avant de publier
+    if (url) setPendingUpload(url); 
   }
 
   async function handlePublish() {
@@ -102,12 +103,14 @@ export function StoryBar() {
           </div>
         )}
 
-        {/* Cartes des autres vendeurs — aperçu direct de la story */}
+        {/* Cartes des autres vendeurs — avec la correction apportée pour TypeScript */}
         {otherGroups.map((group) => {
           const latest = group.stories[group.stories.length - 1];
+          const author = group.author as any; 
+
           return (
             <button
-              key={group.author?._id}
+              key={author?._id}
               onClick={() => setOpenIndex(allGroups.indexOf(group))}
               className="relative shrink-0 w-[104px] h-[152px] rounded-2xl overflow-hidden group"
             >
@@ -116,14 +119,14 @@ export function StoryBar() {
 
               <div className="absolute top-2 left-2 ravinala-ring p-[2px] rounded-full h-7 w-7">
                 <div className="h-full w-full rounded-full border border-ink overflow-hidden bg-ink-soft">
-                  {group.author?.avatarUrl && (
-                    <Image src={group.author.avatarUrl} alt="" width={28} height={28} className="object-cover h-full w-full" />
+                  {author?.avatarUrl && (
+                    <Image src={author.avatarUrl} alt="" width={28} height={28} className="object-cover h-full w-full" />
                   )}
                 </div>
               </div>
 
               <p className="absolute bottom-2 left-2.5 right-2.5 text-white text-xs font-medium truncate text-left drop-shadow">
-                {group.author?.displayName ?? "Vendeur"}
+                {author?.displayName ?? "Vendeur"}
               </p>
             </button>
           );
@@ -140,8 +143,7 @@ export function StoryBar() {
         <StoryViewer groups={allGroups} initialIndex={openIndex} onClose={() => setOpenIndex(null)} />
       )}
 
-      {/* Étape de confirmation — permet de lier un article avant publication,
-          pour que le bouton "Acheter" apparaisse dans la story. */}
+      {/* Étape de confirmation */}
       {pendingUpload && (
         <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 animate-fade-in">
           <div className="w-full max-w-sm">

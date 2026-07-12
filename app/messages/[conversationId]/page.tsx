@@ -42,7 +42,7 @@ export default function ConversationPage() {
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
-    if (!text.trim()) return;
+    if (!text.trim() || !conversation) return;
     await sendMessage({ conversationId: conversation._id, senderId: userId as any, content: text });
     setText("");
   }

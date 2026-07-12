@@ -6,7 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { useCurrentUser } from "@/lib/use-current-user";
 import { GlassPanel } from "@/components/ui/glass-panel";
 import { GlassButton } from "@/components/ui/glass-button";
-import { formatAriary, cn } from "@/lib/utils";
+import { formatAriary } from "@/lib/utils";
 import { BackButton } from "@/components/ui/back-button";
 import { Zap, Check } from "lucide-react";
 
@@ -18,14 +18,19 @@ const PLANS = [
 export default function BoostPage() {
   const { userId, profile } = useCurrentUser();
   const activate = useMutation(api.boosts.activate);
-  const currentBoost = useQuery(api.boosts.myBoost, userId ? { userId: userId as any } : "skip");
+  const currentBoost = useQuery(api.boosts.myBoost, userId ? { userId } : "skip");
   const [activating, setActivating] = useState<string | null>(null);
 
   async function handleActivate(plan: "weekly" | "monthly") {
     if (!userId) return;
     setActivating(plan);
-    await activate({ userId: userId as any, plan });
-    setActivating(null);
+    try {
+      await activate({ userId, plan });
+    } catch (error) {
+      console.error("Erreur lors de l'activation du boost :", error);
+    } finally {
+      setActivating(null);
+    }
   }
 
   if (!userId) return <p className="text-white/60 text-center">Connecte-toi pour booster tes articles.</p>;
