@@ -5,6 +5,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { PaymentGateway } from "@/components/checkout/payment-gateway";
 import { useCurrentUser } from "@/lib/use-current-user";
+import { BackButton } from "@/components/ui/back-button";
 
 export default function CheckoutPage() {
   const params = useSearchParams();
@@ -19,6 +20,7 @@ export default function CheckoutPage() {
 
   return (
     <div>
+      <BackButton />
       <h1 className="font-display text-2xl text-center mb-6">Finaliser la commande</h1>
       <PaymentGateway
         conversationId={conversationId}

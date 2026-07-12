@@ -10,6 +10,7 @@ import { GlassButton } from "@/components/ui/glass-button";
 import { formatAriary } from "@/lib/utils";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BackButton } from "@/components/ui/back-button";
 
 export default function CreateLivePage() {
   const router = useRouter();
@@ -40,6 +41,7 @@ export default function CreateLivePage() {
 
   return (
     <div className="max-w-lg mx-auto">
+      <BackButton />
       <h1 className="font-display text-2xl mb-1">Démarrer un live</h1>
       <p className="text-white/50 text-sm mb-6">
         Choisis les articles à mettre en avant pendant ta diffusion.

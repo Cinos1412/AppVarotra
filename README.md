@@ -65,7 +65,35 @@ Une fois `npx convex dev` lancé, ouvre le dashboard Convex → onglet
 **Functions** → `seed:run` → **Run**. Ça crée un vendeur, un acheteur, quatre
 articles et une story, pour voir l'UI sans passer par l'inscription complète.
 
-## Cartes "premium" vs liquid glass
+## Corrections — session du 12 juillet
+
+**Fichiers remplacés par tes versions corrigées :**
+- `next.config.mjs` — ajout d'`img.clerk.com` (avatars Clerk)
+- `middleware.ts` — `clerkMiddleware`/`createRouteMatcher` (l'ancien `authMiddleware` est déprécié)
+- `convex/escrow.ts` — `btoa` au lieu de `Buffer` (indisponible dans le runtime V8 par défaut de Convex)
+
+**Bugs de comptage :**
+- Les vues produit n'étaient jamais incrémentées (`incrementViews` n'était appelé nulle part) — corrigé, une fois par visite.
+- Le bouton like démarrait toujours "non-liké" même si l'utilisateur avait déjà réagi — ajout de `products.hasReacted` pour initialiser le vrai état.
+- Un vendeur ne peut plus acheter son propre article (bloqué côté UI **et** côté serveur dans `escrow.initiate`/`conversations.getOrCreate`).
+
+**Stories — refonte :**
+- Bulles rondes → cartes rectangulaires avec aperçu visible de l'image (`components/stories/story-bar.tsx`).
+- Proportions d'image corrigées dans le lecteur : fond flouté + image en `object-contain` (ne recadre plus jamais, quel que soit le ratio d'origine).
+- Appui maintenu = pause (comme Instagram/Facebook), swipe vers le bas = fermer.
+- Réactions emoji en direct, visibles par tous les viewers connectés en temps réel grâce à la réactivité Convex (`stories.react`/`stories.listReactions`).
+- Bouton "Acheter"/lien article directement dans la story, avec une étape de confirmation à la publication pour lier un article (optionnel).
+
+**Profil mobile :**
+- Bouton de déconnexion ajouté (`useClerk().signOut()`).
+- L'anneau autour de la photo de profil ne s'affiche plus que si l'utilisateur a une story active (`stories.hasActive`), et n'est plus multicolore — une seule couleur de marque (ravinala).
+
+**Navigation :**
+- `components/ui/back-button.tsx` ajouté sur toutes les pages secondaires qui n'en avaient pas (produit, panier, checkout, vente, boost, factures, notifications, recherche, live/create, profil d'un autre utilisateur).
+
+## Thème clair/sombre
+
+Toggle fonctionnel (`next-themes`, bouton dans la topbar/header mobile). **Choix pragmatique assumé** : plutôt que de réécrire les ~40 fichiers de composants avec des variantes `dark:`/`light:`, le thème clair est appliqué par surcharge CSS ciblée dans `app/globals.css` (`.light .text-white\/70 { ... }` etc.) sur le petit ensemble de classes Tailwind réellement réutilisées partout (opacités de blanc, fonds `ink`, bordures `white/[0.xx]`). Ça couvre large (nav, cartes glass/premium, texte) sans toucher chaque fichier, mais certains détails page par page peuvent manquer de contraste — à me signaler si tu en repères, je corrige au cas par cas plutôt que de deviner.
 
 Deux langages visuels cohabitent volontairement :
 - **Liquid glass** (`GlassPanel`, `.glass`) : chrome de l'app — nav, CTA,

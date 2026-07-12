@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useParams, useRouter } from "next/navigation";
@@ -14,6 +14,7 @@ import { SimilarProducts } from "@/components/products/similar-products";
 import { formatAriary, cn } from "@/lib/utils";
 import { Star, MapPin, ShieldCheck, Heart, Share2, Flag, MessageCircle, ChevronDown, Eye } from "lucide-react";
 import { useCurrentUser } from "@/lib/use-current-user";
+import { BackButton } from "@/components/ui/back-button";
 
 export default function ProductPage() {
   const params = useParams<{ id: string }>();
@@ -23,10 +24,28 @@ export default function ProductPage() {
   const addToCart = useMutation(api.cart.addItem);
   const toggleReaction = useMutation(api.products.toggleReaction);
   const getOrCreateConversation = useMutation(api.conversations.getOrCreate);
+  const incrementViews = useMutation(api.products.incrementViews);
+  const hasCountedView = useRef(false);
 
-  const [liked, setLiked] = useState(false);
+  const alreadyReacted = useQuery(
+    api.products.hasReacted,
+    userId && product ? { userId: userId as any, productId: product._id } : "skip",
+  );
+
+  const isOwnProduct = !!product && !!userId && product.sellerId === userId;
+
+  const [liked, setLiked] = useState<boolean | null>(null);
   const [descExpanded, setDescExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const isLiked = liked ?? alreadyReacted ?? false;
+
+  // Une seule fois par visite, pas à chaque re-render / changement de state local.
+  useEffect(() => {
+    if (product && !hasCountedView.current) {
+      hasCountedView.current = true;
+      incrementViews({ productId: product._id });
+    }
+  }, [product, incrementViews]);
 
   async function handleBuyNow() {
     if (!userId || !product) return;
@@ -50,7 +69,7 @@ export default function ProductPage() {
 
   async function handleLike() {
     if (!userId || !product) return;
-    setLiked((v) => !v);
+    setLiked(!isLiked);
     await toggleReaction({ userId: userId as any, productId: product._id, emoji: "❤️" });
   }
 
@@ -91,6 +110,7 @@ export default function ProductPage() {
 
   return (
     <div className="max-w-5xl mx-auto">
+      <BackButton />
       <div className="grid md:grid-cols-2 gap-8 items-start">
         <div className="animate-fade-in-up">
           <ProductGallery images={product.images} title={product.title} />
@@ -107,7 +127,7 @@ export default function ProductPage() {
                   className="h-10 w-10 rounded-full glass flex items-center justify-center glow-on-hover"
                   aria-label="Ajouter aux favoris"
                 >
-                  <Heart className={cn("h-4 w-4 transition-colors", liked ? "fill-corail text-corail" : "text-white")} />
+                  <Heart className={cn("h-4 w-4 transition-colors", isLiked ? "fill-corail text-corail" : "text-white")} />
                 </button>
                 <button
                   onClick={handleShare}
@@ -183,28 +203,36 @@ export default function ProductPage() {
                     <span className="text-white/30">·</span> {product.seller.followersCount} abonnés
                   </p>
                 </div>
-                <GlassButton variant="glass" size="sm" onClick={handleContactSeller} disabled={!userId}>
-                  <MessageCircle className="h-3.5 w-3.5" /> Contacter
-                </GlassButton>
+                {!isOwnProduct && (
+                  <GlassButton variant="glass" size="sm" onClick={handleContactSeller} disabled={!userId}>
+                    <MessageCircle className="h-3.5 w-3.5" /> Contacter
+                  </GlassButton>
+                )}
               </div>
             </PremiumCard>
           )}
 
           {/* Actions principales */}
-          <div className="flex gap-3 pt-1">
-            <GlassButton
-              variant="glass"
-              size="lg"
-              className="flex-1"
-              disabled={!userId}
-              onClick={() => userId && addToCart({ userId: userId as any, productId: product._id })}
-            >
-              Ajouter au panier
-            </GlassButton>
-            <GlassButton variant="primary" size="lg" className="flex-1" disabled={!userId} onClick={handleBuyNow}>
-              Acheter maintenant
-            </GlassButton>
-          </div>
+          {isOwnProduct ? (
+            <div className="rounded-2xl bg-white/[0.05] text-center text-sm text-white/50 py-3.5">
+              C'est ton article — tu ne peux pas l'acheter toi-même.
+            </div>
+          ) : (
+            <div className="flex gap-3 pt-1">
+              <GlassButton
+                variant="glass"
+                size="lg"
+                className="flex-1"
+                disabled={!userId}
+                onClick={() => userId && addToCart({ userId: userId as any, productId: product._id })}
+              >
+                Ajouter au panier
+              </GlassButton>
+              <GlassButton variant="primary" size="lg" className="flex-1" disabled={!userId} onClick={handleBuyNow}>
+                Acheter maintenant
+              </GlassButton>
+            </div>
+          )}
 
           <button className="flex items-center gap-1.5 text-xs text-white/35 hover:text-white/60 transition-colors mx-auto pt-1">
             <Flag className="h-3 w-3" /> Signaler cette annonce

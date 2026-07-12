@@ -111,6 +111,19 @@ export const incrementViews = mutation({
   },
 });
 
+export const hasReacted = query({
+  args: { userId: v.id("users"), productId: v.id("products") },
+  handler: async (ctx, { userId, productId }) => {
+    const existing = await ctx.db
+      .query("reactions")
+      .withIndex("by_user_target", (q) =>
+        q.eq("userId", userId).eq("targetType", "product").eq("targetId", productId),
+      )
+      .unique();
+    return !!existing;
+  },
+});
+
 /** Réagir à un produit (like / emoji rapide) — bascule si déjà réagi. */
 export const toggleReaction = mutation({
   args: { userId: v.id("users"), productId: v.id("products"), emoji: v.string() },

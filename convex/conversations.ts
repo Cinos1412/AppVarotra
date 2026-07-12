@@ -5,6 +5,8 @@ import { mutation, query } from "./_generated/server";
 export const getOrCreate = mutation({
   args: { buyerId: v.id("users"), sellerId: v.id("users"), productId: v.optional(v.id("products")) },
   handler: async (ctx, { buyerId, sellerId, productId }) => {
+    if (buyerId === sellerId) throw new Error("Impossible de démarrer une conversation avec toi-même.");
+
     const existing = await ctx.db
       .query("conversations")
       .withIndex("by_participants", (q) =>

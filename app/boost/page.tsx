@@ -7,6 +7,7 @@ import { useCurrentUser } from "@/lib/use-current-user";
 import { GlassPanel } from "@/components/ui/glass-panel";
 import { GlassButton } from "@/components/ui/glass-button";
 import { formatAriary, cn } from "@/lib/utils";
+import { BackButton } from "@/components/ui/back-button";
 import { Zap, Check } from "lucide-react";
 
 const PLANS = [
@@ -31,6 +32,7 @@ export default function BoostPage() {
 
   return (
     <div className="max-w-lg mx-auto">
+      <BackButton />
       <div className="text-center mb-8">
         <div className="h-14 w-14 rounded-full bg-gradient-to-br from-vanille to-corail flex items-center justify-center mx-auto mb-3">
           <Zap className="h-7 w-7 text-ink" />

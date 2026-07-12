@@ -12,6 +12,7 @@ import tailwindcssAnimate from "tailwindcss-animate";
  * brume     rgba(255,255,255,x) — le "verre" lui-même
  */
 const config: Config = {
+  darkMode: "class",
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
@@ -82,6 +83,11 @@ const config: Config = {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
         },
+        "float-up": {
+          "0%": { transform: "translateY(0) scale(0.8)", opacity: "0" },
+          "15%": { opacity: "1", transform: "translateY(-10px) scale(1.1)" },
+          "100%": { transform: "translateY(-220px) scale(1)", opacity: "0" },
+        },
       },
       animation: {
         "ring-spin": "ring-spin 6s linear infinite",
@@ -96,6 +102,7 @@ const config: Config = {
         "accordion-up": "accordion-up 0.2s ease-out",
         "caret-blink": "caret-blink 1.25s ease-out infinite",
         shimmer: "shimmer 2s linear infinite",
+        "float-up": "float-up 2s ease-out forwards",
       },
     },
   },

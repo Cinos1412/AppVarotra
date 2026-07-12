@@ -7,12 +7,15 @@ import { api } from "@/convex/_generated/api";
 import { StoryViewer } from "./story-viewer";
 import { useCurrentUser } from "@/lib/use-current-user";
 import { compressImage } from "@/lib/compress-image";
-import { Plus, Loader2 } from "lucide-react";
+import { GlassButton } from "@/components/ui/glass-button";
+import { Plus, Loader2, X } from "lucide-react";
+import { formatAriary } from "@/lib/utils";
 
 /**
- * Bandeau "Nouveautés du jour" — TOUJOURS rendu, même sans aucune story
- * active : sinon la fonctionnalité est invisible et personne ne sait
- * qu'elle existe. La première bulle est toujours "Ta story", pour poster.
+ * Bandeau "Nouveautés du jour" — cartes RECTANGULAIRES avec aperçu visible
+ * de la story (au lieu de petites bulles rondes où il fallait cliquer à
+ * l'aveugle pour voir le contenu). Toujours rendu, même sans donnée, avec
+ * "Ta story" en premier pour publier.
  */
 export function StoryBar() {
   const { userId, profile } = useCurrentUser();
@@ -23,12 +26,14 @@ export function StoryBar() {
 
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [pendingUpload, setPendingUpload] = useState<string | null>(null);
+  const [linkedProductId, setLinkedProductId] = useState<string>("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const myProducts = useQuery(api.products.bySeller, userId ? { sellerId: userId as any } : "skip");
 
-  // On exclut mes propres stories de la liste générale pour les afficher
-  // à part, sous ma propre bulle "Ta story".
   const myGroup = groups.find((g) => g.author?._id === userId);
   const otherGroups = groups.filter((g) => g.author?._id !== userId);
+  const allGroups = myGroup ? [myGroup, ...otherGroups] : otherGroups;
 
   async function handleAddStory(file: File) {
     if (!userId) return;
@@ -38,54 +43,55 @@ export function StoryBar() {
     const result = await fetch(uploadUrl, { method: "POST", headers: { "Content-Type": compressed.type }, body: compressed });
     const { storageId } = await result.json();
     const url = await convex.query(api.files.getUrl, { storageId });
-    if (url) {
-      await createStory({ authorId: userId as any, mediaUrl: url, mediaType: "image" });
-    }
     setUploading(false);
+    if (url) setPendingUpload(url); // on attend la confirmation (avec article lié en option) avant de publier
   }
 
-  const allGroups = myGroup ? [myGroup, ...otherGroups] : otherGroups;
+  async function handlePublish() {
+    if (!userId || !pendingUpload) return;
+    await createStory({
+      authorId: userId as any,
+      mediaUrl: pendingUpload,
+      mediaType: "image",
+      productId: linkedProductId ? (linkedProductId as any) : undefined,
+    });
+    setPendingUpload(null);
+    setLinkedProductId("");
+  }
+
+  const myLatestStory = myGroup?.stories[myGroup.stories.length - 1];
 
   return (
     <>
-      <div className="flex gap-4 overflow-x-auto no-scrollbar px-4 md:px-0 pb-1">
-        {/* Bulle "Ta story" — toujours visible, avec ou sans story active */}
+      <div className="flex gap-3 overflow-x-auto no-scrollbar px-4 md:px-0 pb-1">
+        {/* Carte "Ta story" — toujours en premier, avec ou sans story active */}
         {userId && (
-          <div className="flex flex-col items-center gap-1.5 shrink-0">
+          <div className="relative shrink-0 w-[104px] h-[152px] rounded-2xl overflow-hidden glass">
+            {myLatestStory ? (
+              <button onClick={() => setOpenIndex(0)} className="absolute inset-0">
+                <Image src={myLatestStory.mediaUrl} alt="" fill className="object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+              </button>
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center bg-white/[0.04]">
+                {profile?.avatarUrl && (
+                  <Image src={profile.avatarUrl} alt="" fill className="object-cover opacity-30" />
+                )}
+              </div>
+            )}
+
             <button
-              onClick={() => (myGroup ? setOpenIndex(0) : fileRef.current?.click())}
-              className="relative h-[68px] w-[68px]"
+              onClick={(e) => {
+                e.stopPropagation();
+                fileRef.current?.click();
+              }}
+              className="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-vanille flex items-center justify-center border-2 border-ink animate-float-subtle"
             >
-              {myGroup ? (
-                <div className="ravinala-ring p-[2.5px] rounded-full h-full w-full animate-ring-spin">
-                  <div className="h-full w-full rounded-full border-2 border-ink overflow-hidden bg-ink-soft">
-                    {profile?.avatarUrl && (
-                      <Image src={profile.avatarUrl} alt="" width={64} height={64} className="object-cover h-full w-full" />
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="h-full w-full rounded-full border-2 border-dashed border-white/25 flex items-center justify-center bg-white/[0.04] animate-float-subtle">
-                  {uploading ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-white/60" />
-                  ) : (
-                    <Plus className="h-6 w-6 text-white/60" />
-                  )}
-                </div>
-              )}
-              {myGroup && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    fileRef.current?.click();
-                  }}
-                  className="absolute -bottom-0.5 -right-0.5 h-6 w-6 rounded-full bg-vanille flex items-center justify-center border-2 border-ink"
-                >
-                  <Plus className="h-3.5 w-3.5 text-ink" />
-                </button>
-              )}
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin text-ink" /> : <Plus className="h-4 w-4 text-ink" />}
             </button>
-            <span className="text-xs text-white/70">Ta story</span>
+
+            <p className="absolute bottom-2 left-2.5 text-white text-xs font-medium drop-shadow">Ta story</p>
+
             <input
               ref={fileRef}
               type="file"
@@ -96,30 +102,32 @@ export function StoryBar() {
           </div>
         )}
 
-        {otherGroups.map((group, i) => (
-          <button
-            key={group.author?._id ?? i}
-            onClick={() => setOpenIndex(allGroups.indexOf(group))}
-            className="flex flex-col items-center gap-1.5 shrink-0"
-          >
-            <div className="ravinala-ring p-[2.5px] rounded-full h-[68px] w-[68px] animate-ring-spin">
-              <div className="h-full w-full rounded-full border-2 border-ink overflow-hidden bg-ink-soft">
-                {group.author?.avatarUrl && (
-                  <Image
-                    src={group.author.avatarUrl}
-                    alt={group.author.displayName}
-                    width={64}
-                    height={64}
-                    className="object-cover h-full w-full"
-                  />
-                )}
+        {/* Cartes des autres vendeurs — aperçu direct de la story */}
+        {otherGroups.map((group) => {
+          const latest = group.stories[group.stories.length - 1];
+          return (
+            <button
+              key={group.author?._id}
+              onClick={() => setOpenIndex(allGroups.indexOf(group))}
+              className="relative shrink-0 w-[104px] h-[152px] rounded-2xl overflow-hidden group"
+            >
+              <Image src={latest.mediaUrl} alt="" fill className="object-cover transition-transform group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/5 to-transparent" />
+
+              <div className="absolute top-2 left-2 ravinala-ring p-[2px] rounded-full h-7 w-7">
+                <div className="h-full w-full rounded-full border border-ink overflow-hidden bg-ink-soft">
+                  {group.author?.avatarUrl && (
+                    <Image src={group.author.avatarUrl} alt="" width={28} height={28} className="object-cover h-full w-full" />
+                  )}
+                </div>
               </div>
-            </div>
-            <span className="text-xs text-white/70 max-w-[68px] truncate">
-              {group.author?.displayName ?? "Vendeur"}
-            </span>
-          </button>
-        ))}
+
+              <p className="absolute bottom-2 left-2.5 right-2.5 text-white text-xs font-medium truncate text-left drop-shadow">
+                {group.author?.displayName ?? "Vendeur"}
+              </p>
+            </button>
+          );
+        })}
 
         {!userId && otherGroups.length === 0 && (
           <p className="text-xs text-white/35 flex items-center px-2">
@@ -130,6 +138,46 @@ export function StoryBar() {
 
       {openIndex !== null && allGroups[openIndex] && (
         <StoryViewer groups={allGroups} initialIndex={openIndex} onClose={() => setOpenIndex(null)} />
+      )}
+
+      {/* Étape de confirmation — permet de lier un article avant publication,
+          pour que le bouton "Acheter" apparaisse dans la story. */}
+      {pendingUpload && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 animate-fade-in">
+          <div className="w-full max-w-sm">
+            <div className="relative aspect-[9/16] max-h-[55vh] rounded-3xl overflow-hidden mb-4">
+              <Image src={pendingUpload} alt="" fill className="object-cover" />
+              <button
+                onClick={() => setPendingUpload(null)}
+                className="absolute top-3 right-3 h-8 w-8 rounded-full bg-black/50 flex items-center justify-center"
+              >
+                <X className="h-4 w-4 text-white" />
+              </button>
+            </div>
+
+            {myProducts && myProducts.length > 0 && (
+              <label className="block mb-3">
+                <span className="text-xs text-white/60 mb-1.5 block">Lier un article (optionnel)</span>
+                <select
+                  value={linkedProductId}
+                  onChange={(e) => setLinkedProductId(e.target.value)}
+                  className="w-full h-11 rounded-2xl bg-white/[0.08] border border-white/[0.14] px-4 text-sm text-white"
+                >
+                  <option value="">Aucun article</option>
+                  {myProducts.map((p) => (
+                    <option key={p._id} value={p._id}>
+                      {p.title} — {formatAriary(p.price)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            <GlassButton variant="primary" size="lg" className="w-full" onClick={handlePublish}>
+              Publier la story
+            </GlassButton>
+          </div>
+        </div>
       )}
     </>
   );

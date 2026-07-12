@@ -8,11 +8,15 @@ import { api } from "@/convex/_generated/api";
 import { GlassButton } from "@/components/ui/glass-button";
 import { GlassPanel } from "@/components/ui/glass-panel";
 import { StatChip } from "@/components/ui/stat-chip";
-import { Star, ShieldCheck, Zap, Share2, Pencil, MessageCircle, Users } from "lucide-react";
+import { useClerk } from "@clerk/nextjs";
+import { cn } from "@/lib/utils";
+import { Star, ShieldCheck, Zap, Share2, Pencil, MessageCircle, Users, LogOut } from "lucide-react";
 
 export function ProfileHeader({ profile, currentUserId }: { profile: any; currentUserId?: string }) {
   const follow = useMutation(api.users.follow);
   const unfollow = useMutation(api.users.unfollow);
+  const { signOut } = useClerk();
+  const hasActiveStory = useQuery(api.stories.hasActive, { authorId: profile._id });
   const isFollowingQuery = useQuery(
     api.users.isFollowing,
     currentUserId ? { followerId: currentUserId as any, followingId: profile._id } : "skip",
@@ -60,7 +64,12 @@ export function ProfileHeader({ profile, currentUserId }: { profile: any; curren
   return (
     <GlassPanel className="p-6" intensity="strong">
       <div className="flex items-start gap-4">
-        <div className="ravinala-ring p-[3px] rounded-full h-20 w-20 shrink-0 animate-float-subtle">
+        <div
+          className={cn(
+            "rounded-full shrink-0 h-20 w-20",
+            hasActiveStory ? "bg-ravinala p-[3px] animate-float-subtle" : "p-0",
+          )}
+        >
           <div className="h-full w-full rounded-full border-2 border-ink overflow-hidden bg-ink-soft">
             {profile.avatarUrl && (
               <Image src={profile.avatarUrl} alt={profile.displayName} width={80} height={80} className="object-cover h-full w-full" />
@@ -97,11 +106,16 @@ export function ProfileHeader({ profile, currentUserId }: { profile: any; curren
 
       <div className="flex gap-2.5 mt-5">
         {isSelf ? (
-          <Link href="/onboarding" className="flex-1">
-            <GlassButton variant="glass" className="w-full">
-              <Pencil className="h-3.5 w-3.5" /> Modifier mon profil
+          <>
+            <Link href="/onboarding" className="flex-1">
+              <GlassButton variant="glass" className="w-full">
+                <Pencil className="h-3.5 w-3.5" /> Modifier mon profil
+              </GlassButton>
+            </Link>
+            <GlassButton variant="glass" onClick={() => signOut({ redirectUrl: "/" })}>
+              <LogOut className="h-3.5 w-3.5" />
             </GlassButton>
-          </Link>
+          </>
         ) : (
           <>
             <GlassButton variant={isFollowing ? "glass" : "primary"} className="flex-1" onClick={toggleFollow}>

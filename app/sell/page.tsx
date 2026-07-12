@@ -8,6 +8,7 @@ import { useCurrentUser } from "@/lib/use-current-user";
 import { ImageUploader } from "@/components/ui/image-uploader";
 import { GlassPanel } from "@/components/ui/glass-panel";
 import { GlassButton } from "@/components/ui/glass-button";
+import { BackButton } from "@/components/ui/back-button";
 
 const CATEGORIES = ["Tech", "Mode", "Maison", "Jeux", "Sport", "Autre"] as const;
 const STATES = ["Neuf", "Très bon état", "Bon état", "Correct"] as const;
@@ -50,6 +51,7 @@ export default function SellPage() {
 
   return (
     <div className="max-w-lg mx-auto">
+      <BackButton />
       <h1 className="font-display text-2xl mb-6">Mettre un article en vente</h1>
 
       <GlassPanel className="p-6" intensity="strong">

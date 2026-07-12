@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { ProductCard } from "@/components/products/product-card";
+import { BackButton } from "@/components/ui/back-button";
 import { Search } from "lucide-react";
 
 export default function SearchPage() {
@@ -12,6 +13,7 @@ export default function SearchPage() {
 
   return (
     <div className="max-w-5xl mx-auto">
+      <BackButton />
       <div className="relative mb-6">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
         <input

@@ -3,21 +3,26 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Heart, Star, Zap } from "lucide-react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { cn, formatAriary } from "@/lib/utils";
 import { useState } from "react";
 
 export function ProductCard({ product, currentUserId }: { product: any; currentUserId?: string }) {
   const toggleReaction = useMutation(api.products.toggleReaction);
-  const [liked, setLiked] = useState(false);
+  const alreadyReacted = useQuery(
+    api.products.hasReacted,
+    currentUserId ? { userId: currentUserId as any, productId: product._id } : "skip",
+  );
+  const [liked, setLiked] = useState<boolean | null>(null);
   const [count, setCount] = useState(product.likesCount);
+  const isLiked = liked ?? alreadyReacted ?? false;
 
   async function handleLike(e: React.MouseEvent) {
     e.preventDefault();
     if (!currentUserId) return;
-    setLiked((v) => !v);
-    setCount((c: number) => c + (liked ? -1 : 1));
+    setLiked(!isLiked);
+    setCount((c: number) => c + (isLiked ? -1 : 1));
     await toggleReaction({ userId: currentUserId as any, productId: product._id, emoji: "❤️" });
   }
 
@@ -43,7 +48,7 @@ export function ProductCard({ product, currentUserId }: { product: any; currentU
             className="absolute top-2.5 right-2.5 h-8 w-8 rounded-full glass flex items-center justify-center"
             aria-label="Réagir"
           >
-            <Heart className={cn("h-4 w-4 transition-colors", liked ? "fill-corail text-corail" : "text-white")} />
+            <Heart className={cn("h-4 w-4 transition-colors", isLiked ? "fill-corail text-corail" : "text-white")} />
           </button>
         </div>
 

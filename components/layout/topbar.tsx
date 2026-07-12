@@ -7,6 +7,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { GlassButton } from "@/components/ui/glass-button";
 import { useCurrentUser } from "@/lib/use-current-user";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export function Topbar() {
   const { userId } = useCurrentUser();
@@ -27,6 +28,7 @@ export function Topbar() {
         </Link>
 
         <nav className="flex items-center gap-1.5 shrink-0">
+          <ThemeToggle className="!h-11 !w-11" />
           <Link href="/live">
             <GlassButton variant="ghost" size="md" className="!px-3">
               <Radio className="h-5 w-5" />

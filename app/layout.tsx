@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Fraunces, Plus_Jakarta_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { ThemeProvider } from "@/components/theme-provider";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { Topbar } from "@/components/layout/topbar";
 import { MobileHeader } from "@/components/layout/mobile-header";
@@ -18,22 +19,24 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className={`${fraunces.variable} ${jakarta.variable} ${plexMono.variable}`}>
+    <html lang="fr" className={`${fraunces.variable} ${jakarta.variable} ${plexMono.variable}`} suppressHydrationWarning>
       <body>
-        <div className="app-varotra-atmosphere" aria-hidden>
-          <span />
-          <span />
-          <span />
-        </div>
+        <ThemeProvider>
+          <div className="app-varotra-atmosphere" aria-hidden>
+            <span />
+            <span />
+            <span />
+          </div>
 
-        <Providers>
-          <Topbar />
-          <main className="max-w-6xl mx-auto px-4 md:px-6 pt-0 md:pt-6 pb-28 md:pb-16">
-            <MobileHeader />
-            {children}
-          </main>
-          <BottomNav />
-        </Providers>
+          <Providers>
+            <Topbar />
+            <main className="max-w-6xl mx-auto px-4 md:px-6 pt-0 md:pt-6 pb-28 md:pb-16">
+              <MobileHeader />
+              {children}
+            </main>
+            <BottomNav />
+          </Providers>
+        </ThemeProvider>
       </body>
     </html>
   );

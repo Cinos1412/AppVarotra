@@ -9,6 +9,7 @@ import { GlassButton } from "@/components/ui/glass-button";
 import { GlassPanel } from "@/components/ui/glass-panel";
 import { formatAriary } from "@/lib/utils";
 import { useCurrentUser } from "@/lib/use-current-user";
+import { BackButton } from "@/components/ui/back-button";
 
 export default function CartPage() {
   const { userId } = useCurrentUser();
@@ -32,6 +33,7 @@ export default function CartPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-4">
+      <BackButton />
       <h1 className="font-display text-2xl mb-2">Mon panier</h1>
 
       {items.map((item) => (

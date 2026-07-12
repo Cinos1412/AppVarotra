@@ -20,6 +20,20 @@ const MERCHANT_NUMBERS_RAW = {
 } as const;
 
 /**
+ * Fonction utilitaire pour convertir un ArrayBuffer en chaîne Base64,
+ * compatible avec l'environnement V8 par défaut de Convex (Buffer n'y
+ * est pas disponible sans le flag "use node").
+ */
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+/**
  * Génère un code de description court (numérique), qui remplace le concept
  * de "référence" : il est injecté directement dans le motif du virement
  * (composé dans le code USSD lui-même pour Mvola) plutôt que recopié à la
@@ -70,6 +84,10 @@ export const initiate = mutation({
     operator: v.union(v.literal("mvola"), v.literal("orange_money"), v.literal("airtel_money")),
   },
   handler: async (ctx, args) => {
+    if (args.buyerId === args.sellerId) {
+      throw new Error("Tu ne peux pas acheter ton propre article.");
+    }
+
     const commissionAmount = Math.round(args.amount * COMMISSION_RATE);
 
     const escrowId = await ctx.db.insert("escrow", {
@@ -196,7 +214,7 @@ async function extractReceiptWithGemini(
 
   const imageResponse = await fetch(imageUrl);
   const imageBuffer = await imageResponse.arrayBuffer();
-  const base64Image = Buffer.from(imageBuffer).toString("base64");
+  const base64Image = arrayBufferToBase64(imageBuffer);
   const mimeType = imageResponse.headers.get("content-type") ?? "image/jpeg";
 
   const response = await fetch(
@@ -212,10 +230,10 @@ async function extractReceiptWithGemini(
                 text:
                   "Tu lis une capture d'écran de confirmation de transfert Mobile Money " +
                   "malgache (Mvola, Orange Money ou Airtel Money). Extrais uniquement le " +
-                  "montant transféré (nombre entier, sans espace ni symbole) et la référence " +
-                  "ou le motif du transfert tel qu'écrit. Réponds STRICTEMENT en JSON, sans " +
-                  'texte autour, au format : {"amount": 45000, "reference": "AV-XXXXXX"}. ' +
-                  'Si tu ne trouves pas une valeur, mets null.',
+                  "montant transféré (nombre entier, sans espace ni symbole) et le code de " +
+                  "référence numérique à 4 chiffres présent dans le motif ou la description. " +
+                  'Réponds STRICTEMENT en JSON, sans texte autour, au format : ' +
+                  '{"amount": 45000, "reference": "1412"}. Si tu ne trouves pas une valeur, mets null.',
               },
               { inline_data: { mime_type: mimeType, data: base64Image } },
             ],

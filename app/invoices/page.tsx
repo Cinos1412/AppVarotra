@@ -5,6 +5,7 @@ import { api } from "@/convex/_generated/api";
 import { useCurrentUser } from "@/lib/use-current-user";
 import { GlassPanel } from "@/components/ui/glass-panel";
 import { formatAriary } from "@/lib/utils";
+import { BackButton } from "@/components/ui/back-button";
 import { FileText } from "lucide-react";
 
 export default function InvoicesPage() {
@@ -16,6 +17,7 @@ export default function InvoicesPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
+      <BackButton />
       <h1 className="font-display text-2xl mb-6">Mes factures</h1>
 
       {invoices.length === 0 ? (

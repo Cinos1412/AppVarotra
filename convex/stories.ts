@@ -3,6 +3,15 @@ import { mutation, query } from "./_generated/server";
 
 const STORY_LIFETIME_MS = 24 * 60 * 60 * 1000;
 
+export const hasActive = query({
+  args: { authorId: v.id("users") },
+  handler: async (ctx, { authorId }) => {
+    const now = Date.now();
+    const stories = await ctx.db.query("stories").withIndex("by_author", (q) => q.eq("authorId", authorId)).collect();
+    return stories.some((s) => s.expiresAt > now);
+  },
+});
+
 export const create = mutation({
   args: {
     authorId: v.id("users"),
@@ -58,5 +67,29 @@ export const recordView = mutation({
     await ctx.db.insert("storyViews", { storyId, viewerId });
     const story = await ctx.db.get(storyId);
     if (story) await ctx.db.patch(storyId, { viewsCount: story.viewsCount + 1 });
+  },
+});
+
+/**
+ * Réagit à une story (pas de dédoublonnage volontaire : chaque tap ajoute
+ * une réaction, pour permettre les "rafales" de cœurs comme sur
+ * Instagram/TikTok Live). Visible en direct par tous les viewers connectés
+ * (acheteur ET vendeur) grâce à la réactivité native de Convex.
+ */
+export const react = mutation({
+  args: { storyId: v.id("stories"), userId: v.id("users"), emoji: v.string() },
+  handler: async (ctx, { storyId, userId, emoji }) => {
+    await ctx.db.insert("reactions", { userId, targetType: "story", targetId: storyId, emoji });
+  },
+});
+
+export const listReactions = query({
+  args: { storyId: v.id("stories") },
+  handler: async (ctx, { storyId }) => {
+    return await ctx.db
+      .query("reactions")
+      .withIndex("by_target", (q) => q.eq("targetType", "story").eq("targetId", storyId))
+      .order("desc")
+      .take(50);
   },
 });

@@ -6,6 +6,7 @@ import { useCurrentUser } from "@/lib/use-current-user";
 import { GlassPanel } from "@/components/ui/glass-panel";
 import { GlassButton } from "@/components/ui/glass-button";
 import { timeAgo, cn } from "@/lib/utils";
+import { BackButton } from "@/components/ui/back-button";
 import { Heart, UserPlus, Star, ShieldCheck, Package, Wallet, AlertTriangle, Zap, Radio } from "lucide-react";
 
 const ICONS: Record<string, any> = {
@@ -43,6 +44,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="max-w-lg mx-auto">
+      <BackButton />
       <div className="flex items-center justify-between mb-4">
         <h1 className="font-display text-2xl">Notifications</h1>
         {notifications.some((n) => !n.isRead) && (

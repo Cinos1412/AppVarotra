@@ -5,6 +5,7 @@ import { Bell, MessageCircle, ShoppingCart, Radio } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useCurrentUser } from "@/lib/use-current-user";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 /**
  * En-tête mobile — Topbar (desktop) a `hidden md:block`, il fallait donc
@@ -26,6 +27,7 @@ export function MobileHeader() {
         </Link>
 
         <div className="flex items-center gap-1">
+          <ThemeToggle className="!h-9 !w-9" />
           <Link href="/live" aria-label="Live" className="relative h-9 w-9 flex items-center justify-center">
             <Radio className="h-[18px] w-[18px] text-white/75" />
           </Link>

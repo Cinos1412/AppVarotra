@@ -1,19 +1,26 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-// On définit les routes publiques (qui ne demandent pas de connexion)
-const isPublicRoute = createRouteMatcher(['/', '/terms', '/sign-in(.*)', '/sign-up(.*)']);
+// Routes publiques — le reste exige une session Clerk valide.
+const isPublicRoute = createRouteMatcher([
+  "/",
+  "/terms",
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  "/product/(.*)",
+  "/live",
+  "/live/(.*)",
+  "/api/webhooks/(.*)",
+]);
 
 export default clerkMiddleware((auth, request) => {
   if (!isPublicRoute(request)) {
-    auth().protect(); // Protège automatiquement toutes les autres routes
+    auth().protect();
   }
 });
 
 export const config = {
   matcher: [
-    // Ignore les fichiers internes de Next.js et les fichiers statiques
-    '/((?!_next|[^?]*\\.(?:html|css|js|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // Exécute toujours le middleware pour les requêtes d'API
-    '/(api|trpc)(.*)',
+    "/((?!_next|[^?]*\\.(?:html|css|js|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/(api|trpc)(.*)",
   ],
 };

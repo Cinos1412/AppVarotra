@@ -10,6 +10,7 @@ import { PremiumCard } from "@/components/ui/premium-card";
 import { useCurrentUser } from "@/lib/use-current-user";
 import { Star } from "lucide-react";
 import { cn, timeAgo } from "@/lib/utils";
+import { BackButton } from "@/components/ui/back-button";
 
 export default function ProfilePage() {
   const params = useParams<{ username: string }>();
@@ -24,6 +25,7 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-5 max-w-3xl mx-auto">
+      {userId !== profile._id && <BackButton />}
       <ProfileHeader profile={profile} currentUserId={userId ?? undefined} />
 
       {/* Onglets — structure claire au lieu d'empiler toutes les sections */}
