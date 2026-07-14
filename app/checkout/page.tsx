@@ -6,8 +6,9 @@ import { api } from "@/convex/_generated/api";
 import { PaymentGateway } from "@/components/checkout/payment-gateway";
 import { useCurrentUser } from "@/lib/use-current-user";
 import { BackButton } from "@/components/ui/back-button";
+import { Suspense } from "react";
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const params = useSearchParams();
   const productId = params.get("productId");
   const conversationId = params.get("conversationId");
@@ -30,5 +31,13 @@ export default function CheckoutPage() {
         amount={product.price}
       />
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={<p className="text-white/60 text-center">Chargement du paiement...</p>}>
+      <CheckoutContent />
+    </Suspense>
   );
 }

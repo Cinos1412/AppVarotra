@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { action, internalMutation, mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 
 /** Feed principal : produits boostés en premier, puis les plus récents. */
 export const feed = query({
@@ -66,7 +67,57 @@ export const search = query({
   },
 });
 
-export const create = mutation({
+/**
+ * Insertion réelle en base — interne uniquement, appelée après le passage
+ * par la modération IA (voir `createModerated` juste en dessous). Ne
+ * jamais exposer ceci directement côté client : ça court-circuiterait
+ * la vérification de contenu.
+ */
+export const insertProduct = internalMutation({
+  args: {
+    sellerId: v.id("users"),
+    title: v.string(),
+    description: v.string(),
+    price: v.number(),
+    category: v.union(
+      v.literal("Tech"),
+      v.literal("Mode"),
+      v.literal("Maison"),
+      v.literal("Jeux"),
+      v.literal("Sport"),
+      v.literal("Autre"),
+    ),
+    state: v.union(
+      v.literal("Neuf"),
+      v.literal("Très bon état"),
+      v.literal("Bon état"),
+      v.literal("Correct"),
+    ),
+    location: v.string(),
+    images: v.array(v.string()),
+    moderationStatus: v.union(v.literal("approved"), v.literal("flagged_for_review")),
+    moderationReason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("products", {
+      ...args,
+      isActive: true,
+      isBoosted: false,
+      views: 0,
+      likesCount: 0,
+      ratingAvg: 0,
+      ratingCount: 0,
+    });
+  },
+});
+
+/**
+ * Point d'entrée public pour créer un article : passe d'abord par la
+ * modération IA (convex/moderation.ts). Rejette la publication si le
+ * contenu est manifestement illégal ; publie normalement sinon (avec un
+ * flag "à vérifier" en cas de doute, pour un futur tableau de bord admin).
+ */
+export const createModerated = action({
   args: {
     sellerId: v.id("users"),
     title: v.string(),
@@ -89,15 +140,26 @@ export const create = mutation({
     location: v.string(),
     images: v.array(v.string()),
   },
-  handler: async (ctx, args) => {
-    return await ctx.db.insert("products", {
+  handler: async (ctx, args): Promise<any> => {
+    const moderation = await ctx.runAction(internal.moderation.checkProductContent, {
+      title: args.title,
+      description: args.description,
+      category: args.category,
+      coverImageUrl: args.images[0],
+    });
+
+    if (moderation.verdict === "rejected") {
+      throw new Error(
+        moderation.reason
+          ? `Publication refusée : ${moderation.reason}`
+          : "Cette annonce enfreint nos règles et ne peut pas être publiée.",
+      );
+    }
+
+    return await ctx.runMutation(internal.products.insertProduct, {
       ...args,
-      isActive: true,
-      isBoosted: false,
-      views: 0,
-      likesCount: 0,
-      ratingAvg: 0,
-      ratingCount: 0,
+      moderationStatus: moderation.verdict,
+      moderationReason: moderation.reason,
     });
   },
 });
@@ -108,6 +170,56 @@ export const incrementViews = mutation({
     const product = await ctx.db.get(productId);
     if (!product) return;
     await ctx.db.patch(productId, { views: product.views + 1 });
+  },
+});
+
+export const update = mutation({
+  args: {
+    productId: v.id("products"),
+    sellerId: v.id("users"), // vérifié contre le document — un vendeur ne peut modifier que ses propres articles
+    title: v.string(),
+    description: v.string(),
+    price: v.number(),
+    category: v.union(
+      v.literal("Tech"),
+      v.literal("Mode"),
+      v.literal("Maison"),
+      v.literal("Jeux"),
+      v.literal("Sport"),
+      v.literal("Autre"),
+    ),
+    state: v.union(
+      v.literal("Neuf"),
+      v.literal("Très bon état"),
+      v.literal("Bon état"),
+      v.literal("Correct"),
+    ),
+    location: v.string(),
+    images: v.array(v.string()),
+  },
+  handler: async (ctx, { productId, sellerId, ...patch }) => {
+    const product = await ctx.db.get(productId);
+    if (!product) throw new Error("Article introuvable.");
+    if (product.sellerId !== sellerId) throw new Error("Tu ne peux modifier que tes propres articles.");
+
+    await ctx.db.patch(productId, patch);
+  },
+});
+
+/**
+ * Suppression "douce" : on désactive l'article plutôt que de le supprimer
+ * réellement de la base, pour ne pas casser l'historique des commandes/avis
+ * qui le référencent (une commande passée doit rester consultable même si
+ * l'article n'est plus en vente).
+ */
+export const remove = mutation({
+  args: { productId: v.id("products"), sellerId: v.id("users") },
+  handler: async (ctx, { productId, sellerId }) => {
+    const product = await ctx.db.get(productId);
+    if (!product) throw new Error("Article introuvable.");
+    if (product.sellerId !== sellerId) throw new Error("Tu ne peux supprimer que tes propres articles.");
+
+    await ctx.db.patch(productId, { isActive: false, isBoosted: false });
   },
 });
 

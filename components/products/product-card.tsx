@@ -28,7 +28,7 @@ export function ProductCard({ product, currentUserId }: { product: any; currentU
 
   return (
     <Link href={`/product/${product._id}`} className="group block">
-      <div className="glass rounded-3xl overflow-hidden transition-transform duration-300 group-hover:-translate-y-1">
+      <div className="glass rounded-xl overflow-hidden transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_0_0_1px_rgba(10,132,255,0.4),0_12px_32px_-8px_rgba(10,132,255,0.25)]">
         <div className="relative aspect-square">
           <Image
             src={product.images[0]}
@@ -38,21 +38,22 @@ export function ProductCard({ product, currentUserId }: { product: any; currentU
           />
 
           {product.isBoosted && (
-            <div className="absolute top-2.5 left-2.5 flex items-center gap-1 rounded-full bg-gradient-to-r from-vanille to-corail px-2.5 py-1 text-[11px] font-semibold text-ink">
-              <Zap className="h-3 w-3 fill-ink" /> Boosté
+            <div className="absolute top-2.5 left-2.5 flex items-center gap-1 rounded-md bg-gradient-to-r from-vanille to-corail px-2 py-1 text-[10px] font-semibold text-ink tracking-wide">
+              <Zap className="h-3 w-3 fill-ink" /> BOOSTÉ
             </div>
           )}
 
           <button
             onClick={handleLike}
-            className="absolute top-2.5 right-2.5 h-8 w-8 rounded-full glass flex items-center justify-center"
+            className="absolute top-2.5 right-2.5 h-8 w-8 rounded-lg bg-black/40 backdrop-blur-md flex items-center justify-center"
             aria-label="Réagir"
           >
             <Heart className={cn("h-4 w-4 transition-colors", isLiked ? "fill-corail text-corail" : "text-white")} />
           </button>
         </div>
 
-        <div className="p-3.5">
+        {/* Pied de carte opaque — contraste net façon Studio Premium, pas de flou sur le texte */}
+        <div className="p-3.5 bg-ink-soft">
           <p className="text-[15px] font-medium text-white truncate">{product.title}</p>
           <p className="font-display text-lg text-vanille mt-0.5">{formatAriary(product.price)}</p>
 

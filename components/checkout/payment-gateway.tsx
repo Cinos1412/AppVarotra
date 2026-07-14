@@ -175,7 +175,7 @@ export function PaymentGateway({
           {instructions.ussdVerified ? (
             <a
               href={`tel:${encodeURIComponent(instructions.ussdDialCode)}`}
-              className="flex flex-col items-center justify-center gap-1 rounded-2xl bg-gradient-to-br from-malachite-light to-malachite py-4 text-white glow-on-hover animate-pulse-glow"
+              className="flex flex-col items-center justify-center gap-1 rounded-2xl bg-gradient-to-br from-ravinala-light to-ravinala py-4 text-white glow-on-hover animate-pulse-glow"
             >
               <span className="text-sm font-medium">📞 Payer en un tap</span>
               <span className="text-[11px] font-mono opacity-80">{instructions.ussdDialCode}</span>

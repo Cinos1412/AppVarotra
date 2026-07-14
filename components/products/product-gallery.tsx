@@ -31,7 +31,7 @@ export function ProductGallery({ images, title }: { images: string[]; title: str
         onClick={() => setLightboxOpen(true)}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className="relative aspect-square w-full rounded-4xl overflow-hidden glass block group"
+        className="relative aspect-square w-full rounded-2xl overflow-hidden glass block group"
       >
         <Image src={images[active]} alt={title} fill className="object-cover" priority />
 

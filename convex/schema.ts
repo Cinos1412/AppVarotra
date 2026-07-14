@@ -42,9 +42,14 @@ export default defineSchema({
     // Boost de visibilité (abonnement premium vendeur)
     boostActive: v.boolean(),
     boostExpiresAt: v.optional(v.number()),
+
+    // Administration
+    isAdmin: v.boolean(),
+    accountStatus: v.union(v.literal("active"), v.literal("suspended")),
   })
     .index("by_clerkId", ["clerkId"])
-    .index("by_username", ["username"]),
+    .index("by_username", ["username"])
+    .index("by_accountStatus", ["accountStatus"]),
 
   // ---------------------------------------------------------------------
   // Produits
@@ -76,10 +81,19 @@ export default defineSchema({
     likesCount: v.number(),
     ratingAvg: v.number(),
     ratingCount: v.number(),
+
+    // Modération IA à la publication (voir convex/moderation.ts)
+    moderationStatus: v.union(
+      v.literal("approved"),
+      v.literal("flagged_for_review"), // contenu douteux, visible mais à vérifier par un humain
+      v.literal("rejected"),
+    ),
+    moderationReason: v.optional(v.string()),
   })
     .index("by_seller", ["sellerId"])
     .index("by_category", ["category", "isActive"])
     .index("by_active_boosted", ["isActive", "isBoosted"])
+    .index("by_moderation", ["moderationStatus"])
     .searchIndex("search_title", { searchField: "title", filterFields: ["isActive"] }),
 
   // ---------------------------------------------------------------------
@@ -115,8 +129,10 @@ export default defineSchema({
     productId: v.id("products"),
     rating: v.number(), // 1 à 5
     comment: v.optional(v.string()),
+    images: v.optional(v.array(v.string())), // photos réelles du produit reçu, ajoutées par l'acheteur
   })
     .index("by_seller", ["sellerId"])
+    .index("by_product", ["productId"])
     .index("by_escrow", ["escrowId"]),
 
   // ---------------------------------------------------------------------
@@ -211,6 +227,14 @@ export default defineSchema({
     deliveredAt: v.optional(v.number()), // quand le vendeur clique "Marquer comme livré"
     autoReleaseAt: v.optional(v.number()), // deliveredAt + 24h (voir CGU §3)
     releasedAt: v.optional(v.number()),
+
+    // Litige — rempli quand status passe à "disputed"
+    disputeReason: v.optional(v.string()),
+    disputeOpenedBy: v.optional(v.id("users")),
+    disputeOpenedAt: v.optional(v.number()),
+    disputeResolution: v.optional(v.union(v.literal("released_to_seller"), v.literal("refunded_to_buyer"))),
+    disputeResolvedAt: v.optional(v.number()),
+    disputeResolvedBy: v.optional(v.id("users")), // admin qui a tranché
   })
     .index("by_buyer", ["buyerId"])
     .index("by_seller", ["sellerId"])
@@ -305,6 +329,32 @@ export default defineSchema({
     .index("by_stream", ["streamId"])
     .index("by_stream_user", ["streamId", "userId"]),
 
+  // ---------------------------------------------------------------------
+  // Signalements (bouton "Signaler" sur un produit ou un profil)
+  // ---------------------------------------------------------------------
+  reports: defineTable({
+    targetType: v.union(v.literal("product"), v.literal("user")),
+    targetId: v.string(),
+    reporterId: v.id("users"),
+    reason: v.string(),
+    status: v.union(v.literal("pending"), v.literal("dismissed"), v.literal("action_taken")),
+    reviewedBy: v.optional(v.id("users")),
+    reviewedAt: v.optional(v.number()),
+  })
+    .index("by_status", ["status"])
+    .index("by_target", ["targetType", "targetId"]),
+
+  // ---------------------------------------------------------------------
+  // Journal des actions admin — traçabilité (qui a fait quoi, quand)
+  // ---------------------------------------------------------------------
+  adminActions: defineTable({
+    adminId: v.id("users"),
+    action: v.string(), // ex: "suspend_user", "approve_product", "resolve_dispute"
+    targetType: v.string(),
+    targetId: v.string(),
+    note: v.optional(v.string()),
+  }).index("by_admin", ["adminId"]),
+
   notifications: defineTable({
     userId: v.id("users"),
     type: v.union(
@@ -317,6 +367,9 @@ export default defineSchema({
       v.literal("dispute_opened"),
       v.literal("boost_expiring"),
       v.literal("live_started"),
+      v.literal("dispute_resolved"),
+      v.literal("account_suspended"),
+      v.literal("listing_rejected"),
     ),
     data: v.any(),
     isRead: v.boolean(),

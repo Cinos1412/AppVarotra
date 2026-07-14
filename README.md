@@ -65,7 +65,64 @@ Une fois `npx convex dev` lancé, ouvre le dashboard Convex → onglet
 **Functions** → `seed:run` → **Run**. Ça crée un vendeur, un acheteur, quatre
 articles et une story, pour voir l'UI sans passer par l'inscription complète.
 
-## Corrections — session du 12 juillet
+## Migration Next.js 16 / React 19 / Clerk v7 (13 juillet 2026)
+
+**Pourquoi maintenant :** Next.js 14 est EOL depuis octobre 2025 (plus de patch de
+sécurité), et une faille critique (CVE-2025-66478, RCE potentiel, CVSS 10.0)
+touchant les React Server Components n'était donc jamais corrigée dans ce
+projet. Cette mise à jour n'est pas cosmétique.
+
+**Versions :** `next` 14.2.15 → 16.2.10 (LTS), `react`/`react-dom` 18.3.1 → 19.1.1,
+`@clerk/nextjs` 5.7.5 → 7.5.17, `@types/react(-dom)` alignés sur React 19,
+`eslint-config-next` aligné sur Next 16. Tailwind reste volontairement en v3
+(voir plus bas — migration séparée, non urgente).
+
+**Changements de code appliqués** (les deux seuls endroits du projet qui
+touchaient des API devenues asynchrones — le reste de l'app est en
+composants client avec `useParams()`/`useSearchParams()`, donc épargné par
+le changement `params`/`searchParams` asynchrones de Next 15+) :
+- `middleware.ts` : `auth().protect()` (pattern Clerk v5) → `await auth.protect()`
+  avec le callback `clerkMiddleware` marqué `async` (pattern Clerk v6+/v7 —
+  `authMiddleware` est totalement supprimé depuis v6, on l'évitait déjà).
+- `app/api/webhooks/clerk/route.ts` : `headers()` → `await headers()`
+  (asynchrone depuis Next.js 15).
+
+**⚠️ Important — je n'ai pas pu tester ces changements.** Mon environnement
+n'a pas d'accès réseau pour lancer `npm install`/`next build`/`next dev`. Le
+code a été audité et corrigé à partir de la documentation officielle des
+breaking changes, mais **teste en local avant de déployer en prod** :
+
+```bash
+git commit -am "checkpoint avant migration Next 16 / React 19 / Clerk v7"
+npm install
+npx next build   # doit passer sans erreur de types ni de build
+npm run dev       # tester : connexion, création de produit, paiement, stories
+```
+
+**À vérifier toi-même après `npm install`, dans l'ordre :**
+1. **Node.js ≥ 20 requis par Next 16** — vérifie avec `node -v` dans ton
+   Codespace ; si c'est plus vieux, `nvm install 20 && nvm use 20`.
+2. Si `next build` remonte des erreurs de types côté Clerk (`clerkClient()`
+   par exemple), c'est probablement un appel synchrone qui doit devenir
+   `await clerkClient()` — on n'en utilise pas dans ce projet actuellement,
+   mais vérifie si tu en as ajouté depuis.
+3. Turbopack est désormais le bundler par défaut (dev **et** build) sous
+   Next 16 — notre `next.config.mjs` n'a pas de config webpack custom donc
+   ça devrait être transparent, mais surveille la sortie de build.
+4. `convex/react-clerk` (le pont Convex↔Clerk) n'a pas de contrainte de
+   version connue bloquante avec Clerk v7, mais je n'ai pas de confirmation
+   ferme — si `ConvexProviderWithClerk` remonte une erreur de types après
+   `npm install`, dis-le moi.
+
+## Tailwind CSS v4 — migration séparée, pas urgente
+
+Tailwind v4 (actuellement 4.3.x) est une réécriture complète du moteur
+(config CSS-first via `@theme`, nouveau pipeline PostCSS/Vite). Contrairement
+à Next.js, il n'y a pas d'enjeu de sécurité à rester en v3.4 — c'est un
+outil de build, pas du code qui tourne en prod. Je préfère la traiter comme
+un chantier à part, surtout parce que nos surcharges `.light .bg-white\/\[0.06\]`
+du thème clair (basées sur le moteur PostCSS actuel) devront être revérifiées
+sous le nouveau moteur CSS (Lightning CSS) avant de basculer.
 
 **Fichiers remplacés par tes versions corrigées :**
 - `next.config.mjs` — ajout d'`img.clerk.com` (avatars Clerk)
@@ -159,6 +216,66 @@ s'affiche à la place. Pour activer un vrai live : crée le live côté
 fournisseur, stocke `ingestUrl`/`ingestKey` (à donner au vendeur, ex. pour
 OBS) + `playbackUrl`, puis remplace `VideoPlaceholder` par un vrai lecteur
 dans `app/live/[streamId]/page.tsx`.
+
+## Session du 13 juillet — cartes produit, édition, avis photo, modération IA
+
+**3 correctifs adoptés de tes fichiers** (bugs de compatibilité réels) :
+- `app/checkout/page.tsx` : `useSearchParams()` doit être dans un `<Suspense>` (exigence Next.js pour le rendu statique) — même chose appliquée à `app/sell/page.tsx` qui en a maintenant besoin aussi (mode édition via `?edit=`).
+- `components/stories/story-bar.tsx` : casts `as any` sur `group.author` pour satisfaire TypeScript.
+- `components/layout/topbar.tsx` : `<UserButton afterSignOutUrl="/" />` → prop retirée de l'API v7, redirection déplacée au niveau du `<ClerkProvider>` — **à vérifier après `npm install`**, je n'ai pas pu tester ce nom de prop exact en conditions réelles.
+
+**Fiches produit** : coins moins arrondis (`rounded-3xl` → `rounded-xl`), pied de carte opaque (`bg-ink-soft`) au lieu de glass pour un meilleur contraste du texte, halo bleu `ravinala` au survol au lieu d'un simple déplacement.
+
+**Modifier / supprimer une publication** : boutons sur la fiche produit pour le vendeur (`convex/products.ts` → `update`/`remove`). La suppression est "douce" (`isActive: false`) plutôt qu'une vraie suppression en base, pour ne pas casser l'historique des commandes/avis qui référencent l'article.
+
+**Avis avec photos, sur la fiche produit** : `reviews.images` dans le schéma, formulaire (`components/products/review-form.tsx`) qui apparaît automatiquement dans la conversation une fois la commande finalisée (`OrderStatusCard`), et affichage avec photos cliquables en plein écran directement sur `app/product/[id]/page.tsx` (`components/products/product-reviews.tsx`) — plus seulement sur le profil du vendeur.
+
+**Modération IA à la publication** (`convex/moderation.ts`) : passe par Gemini (texte + photo de couverture) avant toute publication. Trois verdicts : `approved` (publié), `flagged_for_review` (publié mais marqué — en attente d'un futur tableau de bord admin pour vérification humaine), `rejected` (refusé, avec raison affichée au vendeur). Le contenu ordinaire n'est jamais bloqué par excès de prudence — seul du contenu manifestement illégal l'est. Nécessite la même `GEMINI_API_KEY` que l'OCR des reçus.
+
+## Dashboard admin (`/admin`)
+
+Structure complète : `/admin` (stats + graphique des ventes 14 jours),
+`/admin/moderation` (annonces flaggées par l'IA, signalements, litiges —
+en onglets), `/admin/users` (recherche, vérifier, suspendre),
+`/admin/products` (activer/désactiver n'importe quel article).
+
+**Sécurité — important :** la vérification admin (`convex/admin.ts` →
+`requireAdmin()`) se fait côté serveur à partir de la vraie session Clerk
+(`ctx.auth.getUserIdentity()`), pas d'un identifiant passé en argument par
+le client qui pourrait être falsifié. `AdminGuard` côté front n'est qu'un
+confort d'affichage — la vraie protection est dans chaque fonction Convex.
+
+**Premier admin :** le seed (`convex/seed.ts`) rend le vendeur de démo
+admin automatiquement. En dehors du seed, il faut promouvoir le tout
+premier admin manuellement depuis le dashboard Convex (`users` → éditer
+le document → `isAdmin: true`) — après ça, `admin.setAdmin` permet d'en
+promouvoir d'autres depuis l'app elle-même.
+
+Deux mutations manquaient pour que la modération ait des données à
+traiter : `escrow.openDispute` (bouton "Signaler un problème" sur le
+statut de commande) et `reports.submit` (bouton "Signaler" sur la fiche
+produit, qui ne faisait rien avant).
+
+## Système "verre" et nav — retours du 13 juillet
+
+- **Effet liquid glass amélioré** (`.glass` dans `globals.css`) : reflets
+  spéculaires plus marqués, ombres internes en plusieurs couches,
+  `saturate(1.4)` sur le flou pour un rendu plus riche. Le fichier de démo
+  fourni (`index.html`/`style.css`/`script.js`, effet SVG
+  `feDisplacementMap`) n'a pas été repris tel quel — il ne fonctionne que
+  sous Chromium (`backdrop-filter: url()` non supporté par Safari/Firefox),
+  ce qui aurait cassé l'app pour tous les utilisateurs iPhone. On en garde
+  l'esprit (profondeur, reflets) avec des techniques compatibles partout.
+- **Nav basse avec indicateur glissant** (`components/layout/bottom-nav.tsx`) :
+  la pastille derrière l'onglet actif glisse d'un onglet à l'autre avec un
+  easing "spring" (`cubic-bezier(0.34, 1.56, 0.64, 1)`), façon tab bar iOS.
+- **Bouton déconnexion** : l'API Clerk utilisée (`signOut({ redirectUrl })`)
+  était déjà correcte après vérification de la doc à jour — le vrai
+  correctif est une redirection explicite (`window.location.href`) après
+  la promesse `signOut()`, plutôt que de compter uniquement sur le routing
+  interne, plus un état de chargement pour voir immédiatement si ça
+  répond. Si ça ne suffit pas, il faudra un retour précis (message
+  d'erreur dans la console, comportement observé) pour aller plus loin.
 
 ## Corrections récentes (retours utilisateur)
 

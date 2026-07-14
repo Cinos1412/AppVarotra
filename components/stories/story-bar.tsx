@@ -31,7 +31,8 @@ export function StoryBar() {
   const fileRef = useRef<HTMLInputElement>(null);
   const myProducts = useQuery(api.products.bySeller, userId ? { sellerId: userId as any } : "skip");
 
-  // Sécurité TypeScript ajoutée ici pour le filtrage des groupes
+  // Cast de sécurité TypeScript : le type inféré de `activeFeed` (author
+  // potentiellement null côté Convex) fait grincer le compilateur sinon.
   const myGroup = groups.find((g) => (g.author as any)?._id === userId);
   const otherGroups = groups.filter((g) => (g.author as any)?._id !== userId);
   const allGroups = myGroup ? [myGroup, ...otherGroups] : otherGroups;
@@ -45,7 +46,7 @@ export function StoryBar() {
     const { storageId } = await result.json();
     const url = await convex.query(api.files.getUrl, { storageId });
     setUploading(false);
-    if (url) setPendingUpload(url); 
+    if (url) setPendingUpload(url); // on attend la confirmation (avec article lié en option) avant de publier
   }
 
   async function handlePublish() {
@@ -103,10 +104,10 @@ export function StoryBar() {
           </div>
         )}
 
-        {/* Cartes des autres vendeurs — avec la correction apportée pour TypeScript */}
+        {/* Cartes des autres vendeurs — aperçu direct de la story */}
         {otherGroups.map((group) => {
           const latest = group.stories[group.stories.length - 1];
-          const author = group.author as any; 
+          const author = group.author as any;
 
           return (
             <button
@@ -143,7 +144,8 @@ export function StoryBar() {
         <StoryViewer groups={allGroups} initialIndex={openIndex} onClose={() => setOpenIndex(null)} />
       )}
 
-      {/* Étape de confirmation */}
+      {/* Étape de confirmation — permet de lier un article avant publication,
+          pour que le bouton "Acheter" apparaisse dans la story. */}
       {pendingUpload && (
         <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 animate-fade-in">
           <div className="w-full max-w-sm">

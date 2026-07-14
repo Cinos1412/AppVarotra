@@ -19,15 +19,15 @@ body {
   inset: 0;
   z-index: -1;
   overflow: hidden;
-  background: radial-gradient(ellipse at top, #123028 0%, #0a1f1b 60%);
+  background: radial-gradient(circle at center, #0f131a 0%, #07090e 100%);
 }
 
 .app-varotra-atmosphere span {
   position: absolute;
   border-radius: 9999px;
-  filter: blur(70px);
-  opacity: 0.5;
-  animation: blob-drift 18s ease-in-out infinite;
+  filter: blur(120px);
+  opacity: 0.22;
+  animation: blob-drift 22s ease-in-out infinite;
 }
 
 .app-varotra-atmosphere span:nth-child(1) {
@@ -59,7 +59,13 @@ body {
 /* Le "verre" : panneau semi-transparent, bord fin, reflet spéculaire   */
 /* ------------------------------------------------------------------ */
 .glass {
-  @apply relative bg-white/[0.07] backdrop-blur-xl border border-white/[0.14] shadow-glass;
+  @apply relative bg-white/[0.05] backdrop-blur-xl border border-white/[0.08];
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 1px 0 0 rgba(255, 255, 255, 0.12) inset,
+    0 8px 32px 0 rgba(4, 7, 12, 0.5);
 }
 
 .glass::before {
@@ -68,7 +74,7 @@ body {
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 40%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 50%);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -79,97 +85,93 @@ body {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 45%);
 }
 
-/* ------------------------------------------------------------------ */
-/* Thème clair — palette "moderne et premium" pour la vente en ligne.   */
-/*                                                                      */
-/* Plutôt que de réécrire chaque composant avec des variantes           */
-/* `dark:`/`light:` (40+ fichiers), on remappe ici le petit ensemble de */
-/* classes Tailwind réellement réutilisées dans toute l'app (opacités   */
-/* de blanc, fonds ink, bordures). C'est un choix pragmatique : large   */
-/* couverture visuelle immédiate, sans toucher à chaque fichier.        */
-/* Les pages pas encore auditées une par une peuvent avoir un détail    */
-/* qui manque de contraste — à peaufiner au cas par cas si besoin.      */
-/* ------------------------------------------------------------------ */
+/* ================================================================== */
+/* THÈME CLAIR — "Studio Premium" (gris acier/aluminium, plus de beige) */
+/* ================================================================== */
 .light body {
-  background: #f7f5f1;
-  color: #1a1a1a;
+  background: #f5f7fa;
+  color: #090b0e;
 }
 
 .light .app-varotra-atmosphere {
-  background: radial-gradient(ellipse at top, #ffffff 0%, #f2efe8 60%);
+  background: radial-gradient(circle at top, #ffffff 0%, #e4e8ef 100%);
 }
 .light .app-varotra-atmosphere span {
-  opacity: 0.35;
+  filter: blur(140px);
+  opacity: 0.12;
 }
 
 .light .glass {
-  background: rgba(255, 255, 255, 0.65);
-  border-color: rgba(20, 40, 35, 0.08);
-  box-shadow: 0 8px 32px 0 rgba(20, 40, 35, 0.08);
+  background: rgba(255, 255, 255, 0.45);
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.01), 0 8px 32px 0 rgba(10, 20, 40, 0.04);
 }
 .light .glass-specular {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 45%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 45%);
 }
 
 .light .premium-card {
-  background: linear-gradient(165deg, #ffffff 0%, #f6f4ef 100%);
-  border-color: rgba(20, 40, 35, 0.08);
-  box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.8) inset, 0 12px 32px -16px rgba(20, 40, 35, 0.18);
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 0 0 rgba(255, 255, 255, 1) inset, 0 6px 24px -8px rgba(10, 25, 50, 0.06);
 }
 .light .premium-card-dark {
-  background: #16211d;
-  border-color: rgba(255, 255, 255, 0.06);
+  background: #0f131a;
+  border-color: rgba(255, 255, 255, 0.04);
 }
 
-.light .bg-ink { background-color: #f7f5f1; }
-.light .bg-ink-soft { background-color: #ece8e0; }
-.light .border-ink { border-color: #f7f5f1; }
+.light .bg-ink { background-color: #f5f7fa; }
+.light .bg-ink-soft { background-color: #e4e8ef; }
+.light .border-ink { border-color: #e4e8ef; }
 
-/* Texte — remappe les niveaux d'opacité de blanc réellement utilisés */
+/* Texte — remappe tous les paliers d'opacité de blanc réellement utilisés
+   dans les composants (couverture plus fine que juste 90/80/60/40, pour
+   que rien ne reste illisible en clair). */
 .light .text-white,
-.light .text-white\/90 { color: rgba(20, 24, 22, 0.92); }
+.light .text-white\/90 { color: #090b0e; }
 .light .text-white\/85,
-.light .text-white\/80 { color: rgba(20, 24, 22, 0.82); }
-.light .text-white\/75,
-.light .text-white\/70 { color: rgba(20, 24, 22, 0.68); }
-.light .text-white\/60 { color: rgba(20, 24, 22, 0.58); }
+.light .text-white\/80,
+.light .text-white\/75 { color: #2c3540; }
+.light .text-white\/70,
+.light .text-white\/60 { color: #45505f; }
 .light .text-white\/55,
-.light .text-white\/50 { color: rgba(20, 24, 22, 0.48); }
+.light .text-white\/50 { color: #65758c; }
 .light .text-white\/45,
-.light .text-white\/40 { color: rgba(20, 24, 22, 0.4); }
+.light .text-white\/40 { color: #8593a6; }
 .light .text-white\/35,
-.light .text-white\/30 { color: rgba(20, 24, 22, 0.32); }
+.light .text-white\/30 { color: #a0aec0; }
 .light .text-white\/25,
-.light .text-white\/20 { color: rgba(20, 24, 22, 0.22); }
+.light .text-white\/20 { color: #b7c1cf; }
 
-/* Fonds "verre" translucides — mêmes paliers que dans les composants */
-.light .bg-white\/\[0\.03\] { background-color: rgba(20, 40, 35, 0.03); }
-.light .bg-white\/\[0\.04\] { background-color: rgba(20, 40, 35, 0.04); }
-.light .bg-white\/\[0\.05\] { background-color: rgba(20, 40, 35, 0.05); }
-.light .bg-white\/\[0\.06\] { background-color: rgba(20, 40, 35, 0.05); }
-.light .bg-white\/\[0\.07\] { background-color: rgba(20, 40, 35, 0.06); }
-.light .bg-white\/\[0\.08\] { background-color: rgba(20, 40, 35, 0.07); }
-.light .bg-white\/\[0\.09\] { background-color: rgba(20, 40, 35, 0.08); }
+/* Fonds "verre" translucides — mêmes paliers que dans les composants,
+   en gris acier neutre plutôt que teinté. */
+.light .bg-white\/\[0\.03\] { background-color: rgba(9, 11, 14, 0.03); }
+.light .bg-white\/\[0\.04\] { background-color: rgba(9, 11, 14, 0.04); }
+.light .bg-white\/\[0\.05\] { background-color: rgba(9, 11, 14, 0.05); }
+.light .bg-white\/\[0\.06\] { background-color: rgba(9, 11, 14, 0.05); }
+.light .bg-white\/\[0\.07\] { background-color: rgba(9, 11, 14, 0.06); }
+.light .bg-white\/\[0\.08\] { background-color: rgba(9, 11, 14, 0.07); }
+.light .bg-white\/\[0\.09\] { background-color: rgba(9, 11, 14, 0.08); }
 .light .bg-white\/\[0\.1\],
-.light .bg-white\/10 { background-color: rgba(20, 40, 35, 0.08); }
-.light .bg-white\/\[0\.11\] { background-color: rgba(20, 40, 35, 0.09); }
+.light .bg-white\/10 { background-color: rgba(9, 11, 14, 0.08); }
+.light .bg-white\/\[0\.11\] { background-color: rgba(9, 11, 14, 0.09); }
 .light .bg-white\/\[0\.12\],
-.light .bg-white\/12 { background-color: rgba(20, 40, 35, 0.1); }
-.light .bg-white\/\[0\.14\] { background-color: rgba(20, 40, 35, 0.12); }
+.light .bg-white\/12 { background-color: rgba(9, 11, 14, 0.1); }
+.light .bg-white\/\[0\.14\] { background-color: rgba(9, 11, 14, 0.12); }
 
 .light .border-white\/10,
-.light .border-white\/\[0\.1\] { border-color: rgba(20, 40, 35, 0.08); }
-.light .border-white\/\[0\.12\] { border-color: rgba(20, 40, 35, 0.1); }
-.light .border-white\/\[0\.14\] { border-color: rgba(20, 40, 35, 0.12); }
-.light .border-white\/20 { border-color: rgba(20, 40, 35, 0.16); }
+.light .border-white\/\[0\.1\] { border-color: rgba(9, 11, 14, 0.08); }
+.light .border-white\/\[0\.12\] { border-color: rgba(9, 11, 14, 0.1); }
+.light .border-white\/\[0\.14\] { border-color: rgba(9, 11, 14, 0.12); }
+.light .border-white\/20 { border-color: rgba(9, 11, 14, 0.16); }
 
-.light ::placeholder { color: rgba(20, 24, 22, 0.35); }
+.light ::placeholder { color: #a0aec0; }
 
-/* La barre de nav basse et les CTA gardent leurs couleurs de marque
-   (malachite/vanille/corail) inchangées dans les deux thèmes — ce sont
-   des couleurs de marque, pas des tons "surface" à réadapter. */
+/* Les couleurs de marque (malachite/ravinala/vanille/corail) restent
+   inchangées dans les deux thèmes — ce sont des accents, pas des tons
+   de surface à réadapter. */
 .ravinala-ring {
-  background: conic-gradient(from 0deg, #2fa88f, #f2c879, #ff6f59, #2fa88f);
+  background: conic-gradient(from 0deg, #0a84ff, #ffd60a, #ff3b30, #0a84ff);
 }
 
 /* ------------------------------------------------------------------ */
@@ -178,7 +180,7 @@ body {
 /* Surface opaque, bord net, ombre franche : lisibilité avant tout.     */
 /* ------------------------------------------------------------------ */
 .premium-card {
-  background: linear-gradient(165deg, #123028 0%, #0e2620 100%);
+  background: linear-gradient(165deg, #0f131a 0%, #07090e 100%);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.06) inset, 0 12px 32px -12px rgba(0, 0, 0, 0.5);
 }
@@ -216,7 +218,7 @@ body {
   transition: box-shadow 0.3s cubic-bezier(0.25, 0.1, 0.25, 1), transform 0.2s ease;
 }
 .glow-on-hover:hover {
-  box-shadow: 0 0 24px 0 rgba(47, 168, 143, 0.25);
+  box-shadow: 0 0 24px 0 rgba(10, 132, 255, 0.3);
   transform: translateY(-2px);
 }
 

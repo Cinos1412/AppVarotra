@@ -8,8 +8,9 @@ export const create = mutation({
     reviewerId: v.id("users"),
     rating: v.number(),
     comment: v.optional(v.string()),
+    images: v.optional(v.array(v.string())), // photos réelles du produit reçu
   },
-  handler: async (ctx, { escrowId, reviewerId, rating, comment }) => {
+  handler: async (ctx, { escrowId, reviewerId, rating, comment, images }) => {
     const escrow = await ctx.db.get(escrowId);
     if (!escrow) throw new Error("Commande introuvable.");
     if (escrow.buyerId !== reviewerId) throw new Error("Seul l'acheteur peut laisser un avis.");
@@ -28,6 +29,7 @@ export const create = mutation({
       productId: escrow.productId,
       rating,
       comment,
+      images,
     });
 
     const seller = await ctx.db.get(escrow.sellerId);
@@ -57,5 +59,29 @@ export const bySeller = query({
   args: { sellerId: v.id("users") },
   handler: async (ctx, { sellerId }) => {
     return await ctx.db.query("reviews").withIndex("by_seller", (q) => q.eq("sellerId", sellerId)).order("desc").collect();
+  },
+});
+
+/** Avis affichés directement sur la fiche produit (pas juste sur le profil vendeur). */
+export const byProduct = query({
+  args: { productId: v.id("products") },
+  handler: async (ctx, { productId }) => {
+    const reviews = await ctx.db.query("reviews").withIndex("by_product", (q) => q.eq("productId", productId)).order("desc").collect();
+    return await Promise.all(reviews.map(async (r) => ({ ...r, reviewer: await ctx.db.get(r.reviewerId) })));
+  },
+});
+
+/**
+ * Commandes livrées et payées, pour lesquelles l'acheteur n'a pas encore
+ * laissé d'avis — sert à afficher le bouton "Laisser un avis" au bon
+ * endroit (ex: dans la conversation, une fois la commande finalisée).
+ */
+export const canReview = query({
+  args: { escrowId: v.id("escrow"), userId: v.id("users") },
+  handler: async (ctx, { escrowId, userId }) => {
+    const escrow = await ctx.db.get(escrowId);
+    if (!escrow || escrow.buyerId !== userId || escrow.status !== "released") return false;
+    const existing = await ctx.db.query("reviews").withIndex("by_escrow", (q) => q.eq("escrowId", escrowId)).unique();
+    return !existing;
   },
 });

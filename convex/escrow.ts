@@ -7,16 +7,16 @@ const AUTO_RELEASE_DELAY_MS = 24 * 60 * 60 * 1000; // 24h, conformément aux CGU
 
 // Numéro marchand affiché à l'utilisateur (avec espaces, lisible)
 const MERCHANT_NUMBERS = {
-  mvola: "034 42 111 93",
-  orange_money: "037 63 639 11",
-  airtel_money: "033 26 512 43",
+  mvola: "034 00 000 01",
+  orange_money: "032 00 000 01",
+  airtel_money: "033 00 000 01",
 } as const;
 
 // Même numéro, sans espaces — nécessaire pour composer la chaîne USSD
 const MERCHANT_NUMBERS_RAW = {
-  mvola: "0344211193",
-  orange_money: "0376363911",
-  airtel_money: "0332651243",
+  mvola: "0340000001",
+  orange_money: "0320000001",
+  airtel_money: "0330000001",
 } as const;
 
 /**
@@ -67,7 +67,7 @@ function buildUssdDialCode(
     case "mvola":
       return { code: `#111*1*2*${merchant}*${amount}*1*${description}#`, verified: true };
     case "orange_money":
-      return { code: `#144*1*1*${merchant}*${merchant}*${amount}*2#`, verified: true };
+      return { code: `#144*1*1*${merchant}*${amount}*${description}#`, verified: false };
     case "airtel_money":
       return { code: `*436*2*1*1*${merchant}*${amount}*${description}#`, verified: false };
   }
@@ -372,6 +372,29 @@ async function releaseFundsInternal(ctx: any, escrowId: any) {
     isRead: false,
   });
 }
+
+/** L'acheteur ou le vendeur signale un problème — passe la commande en litige pour arbitrage admin. */
+export const openDispute = mutation({
+  args: { escrowId: v.id("escrow"), userId: v.id("users"), reason: v.string() },
+  handler: async (ctx, { escrowId, userId, reason }) => {
+    const escrow = await ctx.db.get(escrowId);
+    if (!escrow) throw new Error("Commande introuvable.");
+    if (escrow.buyerId !== userId && escrow.sellerId !== userId) {
+      throw new Error("Tu n'es pas partie prenante de cette commande.");
+    }
+    if (escrow.status === "released" || escrow.status === "refunded") {
+      throw new Error("Cette commande est déjà finalisée, impossible d'ouvrir un litige.");
+    }
+
+    await ctx.db.patch(escrowId, {
+      status: "disputed",
+      disputeReason: reason,
+      disputeOpenedBy: userId,
+      disputeOpenedAt: Date.now(),
+    });
+    await ctx.db.patch(escrow.conversationId, { paymentStatus: "disputed" });
+  },
+});
 
 export const myOrders = query({
   args: { userId: v.id("users") },

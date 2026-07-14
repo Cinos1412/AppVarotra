@@ -11,8 +11,9 @@ import { PremiumCard } from "@/components/ui/premium-card";
 import { StatChip } from "@/components/ui/stat-chip";
 import { ProductGallery } from "@/components/products/product-gallery";
 import { SimilarProducts } from "@/components/products/similar-products";
+import { ProductReviews } from "@/components/products/product-reviews";
 import { formatAriary, cn } from "@/lib/utils";
-import { Star, MapPin, ShieldCheck, Heart, Share2, Flag, MessageCircle, ChevronDown, Eye } from "lucide-react";
+import { Star, MapPin, ShieldCheck, Heart, Share2, Flag, MessageCircle, ChevronDown, Eye, Pencil, Trash2 } from "lucide-react";
 import { useCurrentUser } from "@/lib/use-current-user";
 import { BackButton } from "@/components/ui/back-button";
 
@@ -25,7 +26,27 @@ export default function ProductPage() {
   const toggleReaction = useMutation(api.products.toggleReaction);
   const getOrCreateConversation = useMutation(api.conversations.getOrCreate);
   const incrementViews = useMutation(api.products.incrementViews);
+  const removeProduct = useMutation(api.products.remove);
+  const submitReport = useMutation(api.reports.submit);
   const hasCountedView = useRef(false);
+  const [deleting, setDeleting] = useState(false);
+  const [reported, setReported] = useState(false);
+
+  async function handleReport() {
+    if (!userId || !product || reported) return;
+    const reason = prompt("Pourquoi signales-tu cette annonce ?");
+    if (!reason || !reason.trim()) return;
+    await submitReport({ targetType: "product", targetId: product._id, reporterId: userId as any, reason: reason.trim() });
+    setReported(true);
+  }
+
+  async function handleDelete() {
+    if (!userId || !product) return;
+    if (!confirm("Retirer définitivement cet article de la vente ?")) return;
+    setDeleting(true);
+    await removeProduct({ productId: product._id, sellerId: userId as any });
+    router.push(`/profile/me`);
+  }
 
   const alreadyReacted = useQuery(
     api.products.hasReacted,
@@ -91,7 +112,7 @@ export default function ProductPage() {
   if (product === undefined) {
     return (
       <div className="grid md:grid-cols-2 gap-8">
-        <div className="aspect-square rounded-4xl shimmer-bg" />
+        <div className="aspect-square rounded-2xl shimmer-bg" />
         <div className="space-y-4">
           <div className="h-8 w-2/3 rounded-xl shimmer-bg" />
           <div className="h-24 rounded-2xl shimmer-bg" />
@@ -214,8 +235,21 @@ export default function ProductPage() {
 
           {/* Actions principales */}
           {isOwnProduct ? (
-            <div className="rounded-2xl bg-white/[0.05] text-center text-sm text-white/50 py-3.5">
-              C'est ton article — tu ne peux pas l'acheter toi-même.
+            <div className="flex gap-3 pt-1">
+              <Link href={`/sell?edit=${product._id}`} className="flex-1">
+                <GlassButton variant="glass" size="lg" className="w-full">
+                  <Pencil className="h-4 w-4" /> Modifier
+                </GlassButton>
+              </Link>
+              <GlassButton
+                variant="danger"
+                size="lg"
+                className="flex-1"
+                isLoading={deleting}
+                onClick={handleDelete}
+              >
+                <Trash2 className="h-4 w-4" /> Supprimer
+              </GlassButton>
             </div>
           ) : (
             <div className="flex gap-3 pt-1">
@@ -234,12 +268,16 @@ export default function ProductPage() {
             </div>
           )}
 
-          <button className="flex items-center gap-1.5 text-xs text-white/35 hover:text-white/60 transition-colors mx-auto pt-1">
-            <Flag className="h-3 w-3" /> Signaler cette annonce
+          <button
+            onClick={handleReport}
+            className="flex items-center gap-1.5 text-xs text-white/35 hover:text-white/60 transition-colors mx-auto pt-1"
+          >
+            <Flag className="h-3 w-3" /> {reported ? "Signalé, merci" : "Signaler cette annonce"}
           </button>
         </div>
       </div>
 
+      <ProductReviews productId={product._id} />
       <SimilarProducts category={product.category} excludeId={product._id} currentUserId={userId ?? undefined} />
     </div>
   );

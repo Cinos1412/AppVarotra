@@ -42,7 +42,7 @@ export default function ConversationPage() {
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
-    if (!text.trim() || !conversation) return;
+    if (!text.trim()) return;
     await sendMessage({ conversationId: conversation._id, senderId: userId as any, content: text });
     setText("");
   }
@@ -78,7 +78,7 @@ export default function ConversationPage() {
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-0.5">
         {relatedEscrow && (
           <div className="mb-3">
-            <OrderStatusCard escrow={relatedEscrow} isSeller={relatedEscrow.sellerId === userId} />
+            <OrderStatusCard escrow={relatedEscrow} isSeller={relatedEscrow.sellerId === userId} currentUserId={userId} />
           </div>
         )}
 
@@ -89,7 +89,7 @@ export default function ConversationPage() {
               <div
                 className={cn(
                   "max-w-[75%] px-4 py-2.5 text-[14.5px] leading-snug",
-                  isMine ? "bg-malachite text-white" : "bg-white/[0.09] text-white/90",
+                  isMine ? "bg-ravinala text-white" : "bg-white/[0.09] text-white/90",
                   // Coins arrondis "en groupe" façon iMessage
                   isMine
                     ? cn("rounded-2xl", msg.isFirstOfGroup && "rounded-tr-md", msg.isLastOfGroup && "rounded-br-md")
@@ -119,7 +119,7 @@ export default function ConversationPage() {
         <button
           type="submit"
           disabled={!text.trim()}
-          className="h-12 w-12 rounded-full bg-malachite flex items-center justify-center shrink-0 disabled:opacity-40"
+          className="h-12 w-12 rounded-full bg-ravinala flex items-center justify-center shrink-0 disabled:opacity-40"
         >
           <Send className="h-4 w-4" />
         </button>

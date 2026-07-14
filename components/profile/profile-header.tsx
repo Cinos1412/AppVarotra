@@ -10,12 +10,13 @@ import { GlassPanel } from "@/components/ui/glass-panel";
 import { StatChip } from "@/components/ui/stat-chip";
 import { useClerk } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
-import { Star, ShieldCheck, Zap, Share2, Pencil, MessageCircle, Users, LogOut } from "lucide-react";
+import { Star, ShieldCheck, Zap, Share2, Pencil, MessageCircle, Users, LogOut, LayoutDashboard } from "lucide-react";
 
 export function ProfileHeader({ profile, currentUserId }: { profile: any; currentUserId?: string }) {
   const follow = useMutation(api.users.follow);
   const unfollow = useMutation(api.users.unfollow);
   const { signOut } = useClerk();
+  const [signingOut, setSigningOut] = useState(false);
   const hasActiveStory = useQuery(api.stories.hasActive, { authorId: profile._id });
   const isFollowingQuery = useQuery(
     api.users.isFollowing,
@@ -34,6 +35,21 @@ export function ProfileHeader({ profile, currentUserId }: { profile: any; curren
       await unfollow({ followerId: currentUserId as any, followingId: profile._id });
     } else {
       await follow({ followerId: currentUserId as any, followingId: profile._id });
+    }
+  }
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    try {
+      await signOut();
+      // Redirection "en dur" plutôt que de compter uniquement sur le
+      // routing interne de Clerk — si jamais ça ne redirige pas tout
+      // seul, ça garantit quand même que l'utilisateur atterrit sur
+      // l'accueil avec une session bien terminée.
+      window.location.href = "/";
+    } catch (err) {
+      console.error("Erreur lors de la déconnexion :", err);
+      setSigningOut(false);
     }
   }
 
@@ -107,12 +123,19 @@ export function ProfileHeader({ profile, currentUserId }: { profile: any; curren
       <div className="flex gap-2.5 mt-5">
         {isSelf ? (
           <>
+            {profile.isAdmin && (
+              <Link href="/admin">
+                <GlassButton variant="glass">
+                  <LayoutDashboard className="h-3.5 w-3.5" />
+                </GlassButton>
+              </Link>
+            )}
             <Link href="/onboarding" className="flex-1">
               <GlassButton variant="glass" className="w-full">
                 <Pencil className="h-3.5 w-3.5" /> Modifier mon profil
               </GlassButton>
             </Link>
-            <GlassButton variant="glass" onClick={() => signOut({ redirectUrl: "/" })}>
+            <GlassButton variant="glass" onClick={handleSignOut} isLoading={signingOut}>
               <LogOut className="h-3.5 w-3.5" />
             </GlassButton>
           </>

@@ -55,7 +55,7 @@ export function Topbar() {
             )}
           </Link>
           <div className="ml-1">
-            <UserButton afterSignOutUrl="/" />
+            <UserButton />
           </div>
         </nav>
       </div>

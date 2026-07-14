@@ -42,7 +42,7 @@ export function LiveChat({ streamId, userId }: { streamId: string; userId: strin
             placeholder="Envoyer un message..."
             className="flex-1 h-10 rounded-full bg-white/[0.08] border border-white/[0.12] px-4 text-sm focus:outline-none focus:border-ravinala/60"
           />
-          <button type="submit" className="h-10 w-10 rounded-full bg-malachite flex items-center justify-center shrink-0">
+          <button type="submit" className="h-10 w-10 rounded-full bg-ravinala flex items-center justify-center shrink-0">
             <Send className="h-3.5 w-3.5" />
           </button>
         </form>

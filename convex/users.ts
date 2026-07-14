@@ -31,6 +31,8 @@ export const getOrCreateProfile = mutation({
       followersCount: 0,
       followingCount: 0,
       boostActive: false,
+      isAdmin: false,
+      accountStatus: "active",
     });
   },
 });

@@ -27,6 +27,8 @@ export const run = mutation({
       followingCount: 12,
       boostActive: true,
       boostExpiresAt: Date.now() + 5 * 24 * 60 * 60 * 1000,
+      isAdmin: true, // pratique pour tester le dashboard admin tout de suite après le seed
+      accountStatus: "active",
     });
 
     const buyerId = await ctx.db.insert("users", {
@@ -42,6 +44,8 @@ export const run = mutation({
       followersCount: 4,
       followingCount: 9,
       boostActive: false,
+      isAdmin: false,
+      accountStatus: "active",
     });
 
     const sampleProducts = [
@@ -62,6 +66,7 @@ export const run = mutation({
         location: "Antananarivo",
         images: [p.img],
         isActive: true,
+        moderationStatus: "approved",
         isBoosted: true,
         views: 12,
         likesCount: 3,
