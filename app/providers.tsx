@@ -20,12 +20,11 @@ export function Providers({ children }: { children: ReactNode }) {
         variables: {
           colorPrimary: "#0A84FF",
           colorBackground: "#07090E",
-          colorInputBackground: "#0F131A",
-          colorInputText: "#F5FBF9",
-          colorText: "#FFFFFF",
         },
         elements: {
           card: "glass backdrop-blur-xl border border-white/[0.06] shadow-glass",
+          formButtonPrimary: "bg-blue-600 hover:bg-blue-700",
+          input: "bg-[#0F131A] border-white/[0.14] text-[#F5FBF9]",
         },
       }}
     >
