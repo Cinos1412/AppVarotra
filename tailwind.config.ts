@@ -22,8 +22,9 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: "#07090E",
-        "ink-soft": "#0F131A",
+        ink: "#0A0C10",
+        "ink-soft": "#12151C",
+        "ink-elevated": "#181C25",
         malachite: { DEFAULT: "#00FFC3", light: "#00E5AF" },
         ravinala: { DEFAULT: "#0A84FF", light: "#409CFF" },
         vanille: { DEFAULT: "#FFD60A", light: "#FFE066" },

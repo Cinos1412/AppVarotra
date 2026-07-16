@@ -7,6 +7,42 @@ import { GlassPanel } from "@/components/ui/glass-panel";
 import { GlassButton } from "@/components/ui/glass-button";
 import { ReviewForm } from "@/components/products/review-form";
 import { Package, PackageCheck, Clock, Star, Check, AlertTriangle } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const STEPS = [
+  { key: "awaiting_payment", label: "Commande créée" },
+  { key: "awaiting_verification", label: "Preuve envoyée" },
+  { key: "in_escrow", label: "Paiement confirmé" },
+  { key: "delivered_pending_confirmation", label: "Livraison confirmée" },
+  { key: "released", label: "Libéré" },
+];
+
+function StepTracker({ status }: { status: string }) {
+  if (status === "disputed" || status === "refunded") return null;
+  const currentIndex = STEPS.findIndex((s) => s.key === status);
+
+  return (
+    <div className="flex items-center mb-4">
+      {STEPS.map((step, i) => {
+        const done = i <= currentIndex;
+        return (
+          <div key={step.key} className="flex items-center flex-1 last:flex-none">
+            <div
+              className={cn(
+                "h-2 w-2 rounded-full shrink-0 transition-colors",
+                done ? "bg-ravinala" : "bg-white/15",
+              )}
+              title={step.label}
+            />
+            {i < STEPS.length - 1 && (
+              <div className={cn("h-0.5 flex-1 mx-0.5 transition-colors", i < currentIndex ? "bg-ravinala" : "bg-white/15")} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export function OrderStatusCard({ escrow, isSeller, currentUserId }: { escrow: any; isSeller: boolean; currentUserId?: string }) {
   const markDelivered = useMutation(api.escrow.markDelivered);
@@ -39,6 +75,7 @@ export function OrderStatusCard({ escrow, isSeller, currentUserId }: { escrow: a
 
   return (
     <GlassPanel className="p-5">
+      <StepTracker status={escrow.status} />
       <div className="flex items-center gap-3">
         <div className="h-10 w-10 rounded-full bg-white/[0.08] flex items-center justify-center shrink-0">
           {escrow.status === "released" ? (
@@ -75,7 +112,7 @@ export function OrderStatusCard({ escrow, isSeller, currentUserId }: { escrow: a
           className="w-full mt-4"
           onClick={() => confirmReceipt({ escrowId: escrow._id })}
         >
-          Confirmer la réception
+          Confirmer et libérer le paiement
         </GlassButton>
       )}
 
@@ -126,17 +163,17 @@ function statusLabel(status: string) {
     case "awaiting_payment":
       return "En attente du virement";
     case "awaiting_verification":
-      return "Vérification du paiement...";
+      return "Preuve envoyée — vérification en cours";
     case "in_escrow":
-      return "Paiement bloqué en séquestre";
+      return "Paiement confirmé, bloqué en séquestre";
     case "delivered_pending_confirmation":
-      return "Marqué comme livré";
+      return "Livraison confirmée par le vendeur";
     case "released":
-      return "Fonds versés au vendeur";
+      return "Paiement libéré au vendeur";
     case "disputed":
       return "Litige en cours";
     case "refunded":
-      return "Remboursé";
+      return "Remboursé à l'acheteur";
     default:
       return status;
   }

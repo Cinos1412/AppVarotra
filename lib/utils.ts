@@ -10,6 +10,23 @@ export function formatAriary(amount: number) {
   return new Intl.NumberFormat("fr-MG", { maximumFractionDigits: 0 }).format(amount) + " Ar";
 }
 
+export function getActivePromo(product: { promoPrice?: number; promoEndsAt?: number; price: number }) {
+  if (product.promoPrice === undefined || product.promoEndsAt === undefined) return null;
+  if (product.promoEndsAt <= Date.now()) return null;
+  const discountPercent = Math.round((1 - product.promoPrice / product.price) * 100);
+  return { promoPrice: product.promoPrice, endsAt: product.promoEndsAt, discountPercent };
+}
+
+export function formatCountdown(endsAt: number) {
+  const remaining = endsAt - Date.now();
+  if (remaining <= 0) return "Terminé";
+  const h = Math.floor(remaining / 3_600_000);
+  const m = Math.floor((remaining % 3_600_000) / 60_000);
+  const s = Math.floor((remaining % 60_000) / 1000);
+  if (h > 0) return `${h}h ${m}min`;
+  return `${m}min ${s}s`;
+}
+
 export function timeAgo(timestampMs: number) {
   const diff = Date.now() - timestampMs;
   const minutes = Math.floor(diff / 60000);

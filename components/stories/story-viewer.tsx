@@ -158,18 +158,20 @@ export function StoryViewer({
         </div>
 
         <div className="absolute top-7 left-3 right-3 z-10 flex items-center gap-2">
-          <div className="ravinala-ring p-[2px] rounded-full h-9 w-9">
-            <div className="h-full w-full rounded-full border border-ink overflow-hidden bg-ink-soft">
-              {group.author?.avatarUrl && (
-                <Image src={group.author.avatarUrl} alt="" width={36} height={36} className="object-cover" />
-              )}
+          <Link href={group.author?.username ? `/profile/${group.author.username}` : "#"} className="flex items-center gap-2 min-w-0">
+            <div className="ravinala-ring p-[2px] rounded-full h-9 w-9 shrink-0">
+              <div className="h-full w-full rounded-full border border-ink overflow-hidden bg-ink-soft">
+                {group.author?.avatarUrl && (
+                  <Image src={group.author.avatarUrl} alt="" width={36} height={36} className="object-cover" />
+                )}
+              </div>
             </div>
-          </div>
-          <div className="text-white text-sm">
-            <p className="font-medium leading-none">{group.author?.displayName}</p>
-            <p className="text-white/60 text-xs mt-0.5">{timeAgo(story._creationTime)}</p>
-          </div>
-          {isPaused && <span className="ml-auto text-[10px] text-white/50 bg-white/10 px-2 py-1 rounded-full">Pause</span>}
+            <div className="text-white text-sm min-w-0">
+              <p className="font-medium leading-none truncate">{group.author?.displayName}</p>
+              <p className="text-white/60 text-xs mt-0.5">{timeAgo(story._creationTime)}</p>
+            </div>
+          </Link>
+          {isPaused && <span className="ml-auto text-[10px] text-white/50 bg-white/10 px-2 py-1 rounded-full shrink-0">Pause</span>}
         </div>
 
         {/* Image — fond flouté + image en object-contain pour ne JAMAIS
@@ -206,12 +208,20 @@ export function StoryViewer({
               <p className="text-xs text-white truncate">{product.title}</p>
               <p className="text-vanille text-sm font-display">{formatAriary(product.price)}</p>
             </div>
-            <Link
-              href={`/product/${product._id}`}
-              className="h-9 w-9 rounded-full bg-gradient-to-br from-vanille to-corail flex items-center justify-center shrink-0"
-            >
-              <ShoppingBag className="h-4 w-4 text-ink" />
-            </Link>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Link
+                href={`/product/${product._id}`}
+                className="h-9 px-3 rounded-full bg-white/10 flex items-center justify-center text-white text-xs font-medium"
+              >
+                Voir
+              </Link>
+              <Link
+                href={`/checkout?productId=${product._id}`}
+                className="h-9 px-3 rounded-full bg-gradient-to-br from-vanille to-corail flex items-center gap-1 justify-center text-ink text-xs font-semibold"
+              >
+                <ShoppingBag className="h-3.5 w-3.5" /> Acheter
+              </Link>
+            </div>
           </div>
         )}
 

@@ -75,6 +75,15 @@ export default defineSchema({
     ),
     location: v.string(),
     images: v.array(v.string()), // URLs ou storageId Convex (fichiers uploadés)
+
+    // Attributs personnalisés (Taille/Couleur pour Mode, Stockage/RAM pour
+    // Tech, etc.) — libres, saisis par le vendeur, affichés tels quels.
+    attributes: v.optional(v.array(v.object({ key: v.string(), value: v.string() }))),
+
+    // Promotion / vente flash — actif si promoPrice est défini ET
+    // promoEndsAt est dans le futur.
+    promoPrice: v.optional(v.number()),
+    promoEndsAt: v.optional(v.number()),
     isActive: v.boolean(), // false = vendu / retiré
     isBoosted: v.boolean(), // remonté dans le feed grâce au boost du vendeur
     views: v.number(),
@@ -192,7 +201,9 @@ export default defineSchema({
   // Passerelle de paiement propriétaire + séquestre (escrow)
   // ---------------------------------------------------------------------
   escrow: defineTable({
-    conversationId: v.id("conversations"),
+    // Optionnel : la conversation n'est créée qu'au moment où l'acheteur
+    // clique "J'ai effectué le virement" — pas dès le choix de l'opérateur.
+    conversationId: v.optional(v.id("conversations")),
     productId: v.id("products"),
     buyerId: v.id("users"),
     sellerId: v.id("users"),
@@ -267,10 +278,24 @@ export default defineSchema({
     userId: v.id("users"),
     plan: v.union(v.literal("weekly"), v.literal("monthly")),
     price: v.number(),
-    startsAt: v.number(),
-    expiresAt: v.number(),
-    status: v.union(v.literal("active"), v.literal("expired"), v.literal("cancelled")),
-    escrowId: v.optional(v.id("escrow")), // si le boost est payé via la même passerelle
+    startsAt: v.optional(v.number()), // rempli seulement une fois le paiement confirmé
+    expiresAt: v.optional(v.number()),
+    status: v.union(
+      v.literal("active"),
+      v.literal("expired"),
+      v.literal("cancelled"),
+      // Étapes de paiement, avant activation :
+      v.literal("awaiting_payment"),
+      v.literal("awaiting_verification"),
+    ),
+
+    // Paiement Mobile Money vers le numéro marchand de l'admin — même
+    // principe que l'achat d'un article (convex/escrow.ts), en plus simple
+    // (pas de livraison à confirmer, juste un paiement à vérifier).
+    operator: v.optional(v.union(v.literal("mvola"), v.literal("orange_money"), v.literal("airtel_money"))),
+    referenceCode: v.optional(v.string()),
+    proofScreenshotUrl: v.optional(v.string()),
+    proofTransactionId: v.optional(v.string()),
   })
     .index("by_user", ["userId"])
     .index("by_status_expires", ["status", "expiresAt"]),

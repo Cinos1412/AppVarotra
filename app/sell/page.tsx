@@ -9,15 +9,28 @@ import { ImageUploader } from "@/components/ui/image-uploader";
 import { GlassPanel } from "@/components/ui/glass-panel";
 import { GlassButton } from "@/components/ui/glass-button";
 import { BackButton } from "@/components/ui/back-button";
-import { ShieldAlert } from "lucide-react";
+import { ShieldAlert, Plus, X, Zap } from "lucide-react";
 
 const CATEGORIES = ["Tech", "Mode", "Maison", "Jeux", "Sport", "Autre"] as const;
 const STATES = ["Neuf", "Très bon état", "Bon état", "Correct"] as const;
 
+// Attributs suggérés par catégorie — le vendeur peut aussi en ajouter de
+// libres, ceci n'est qu'un point de départ pour gagner du temps.
+const SUGGESTED_ATTRIBUTES: Record<string, string[]> = {
+  Tech: ["Stockage", "RAM", "Processeur", "Carte graphique", "Autonomie batterie"],
+  Mode: ["Taille", "Couleur", "Matière"],
+  Maison: ["Dimensions", "Matériau", "Couleur"],
+  Jeux: ["Plateforme", "Édition", "Région"],
+  Sport: ["Taille", "Poids", "Marque"],
+  Autre: [],
+};
+
+type Attribute = { key: string; value: string };
+
 function SellForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const editId = searchParams.get("edit"); // présent = mode édition, sinon mode création
+  const editId = searchParams.get("edit");
   const { userId, isLoading } = useCurrentUser();
 
   const existingProduct = useQuery(api.products.getById, editId ? { productId: editId as any } : "skip");
@@ -31,11 +44,14 @@ function SellForm() {
   const [state, setState] = useState<(typeof STATES)[number]>("Bon état");
   const [location, setLocation] = useState("Antananarivo");
   const [images, setImages] = useState<string[]>([]);
+  const [attributes, setAttributes] = useState<Attribute[]>([]);
+  const [showPromo, setShowPromo] = useState(false);
+  const [promoPrice, setPromoPrice] = useState("");
+  const [promoDays, setPromoDays] = useState("3");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [prefilled, setPrefilled] = useState(false);
 
-  // Préremplit le formulaire une fois l'article existant chargé (mode édition)
   useEffect(() => {
     if (existingProduct && !prefilled) {
       setTitle(existingProduct.title);
@@ -45,15 +61,43 @@ function SellForm() {
       setState(existingProduct.state as any);
       setLocation(existingProduct.location);
       setImages(existingProduct.images);
+      setAttributes(existingProduct.attributes ?? []);
+      if (existingProduct.promoPrice) {
+        setShowPromo(true);
+        setPromoPrice(String(existingProduct.promoPrice));
+      }
       setPrefilled(true);
     }
   }, [existingProduct, prefilled]);
+
+  function addSuggestedAttribute(key: string) {
+    if (attributes.some((a) => a.key === key)) return;
+    setAttributes((prev) => [...prev, { key, value: "" }]);
+  }
+
+  function addCustomAttribute() {
+    setAttributes((prev) => [...prev, { key: "", value: "" }]);
+  }
+
+  function updateAttribute(index: number, field: "key" | "value", value: string) {
+    setAttributes((prev) => prev.map((a, i) => (i === index ? { ...a, [field]: value } : a)));
+  }
+
+  function removeAttribute(index: number) {
+    setAttributes((prev) => prev.filter((_, i) => i !== index));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!userId || images.length === 0) return;
     setSubmitting(true);
     setError(null);
+
+    const cleanAttributes = attributes.filter((a) => a.key.trim() && a.value.trim());
+    const promoData =
+      showPromo && promoPrice
+        ? { promoPrice: Number(promoPrice), promoEndsAt: Date.now() + Number(promoDays) * 24 * 60 * 60 * 1000 }
+        : {};
 
     try {
       if (editId) {
@@ -67,11 +111,11 @@ function SellForm() {
           state,
           location,
           images,
+          attributes: cleanAttributes,
+          ...promoData,
         });
         router.push(`/product/${editId}`);
       } else {
-        // Passe par la modération IA — peut rejeter la publication si le
-        // contenu est manifestement illégal (voir convex/moderation.ts).
         const productId = await createModerated({
           sellerId: userId as any,
           title,
@@ -81,6 +125,8 @@ function SellForm() {
           state,
           location,
           images,
+          attributes: cleanAttributes,
+          ...promoData,
         });
         router.push(`/product/${productId}`);
       }
@@ -97,6 +143,8 @@ function SellForm() {
   if (editId && existingProduct && existingProduct.sellerId !== userId) {
     return <p className="text-white/60 text-center">Tu ne peux modifier que tes propres articles.</p>;
   }
+
+  const suggestions = SUGGESTED_ATTRIBUTES[category]?.filter((s) => !attributes.some((a) => a.key === s)) ?? [];
 
   return (
     <div className="max-w-lg mx-auto">
@@ -162,6 +210,75 @@ function SellForm() {
                 {STATES.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </Field>
+          </div>
+
+          {/* Attributs personnalisés — suggérés selon la catégorie + libres */}
+          <div>
+            <span className="text-sm text-white/70 mb-2 block">Caractéristiques (optionnel)</span>
+
+            {attributes.map((attr, i) => (
+              <div key={i} className="flex gap-2 mb-2">
+                <input
+                  value={attr.key}
+                  onChange={(e) => updateAttribute(i, "key", e.target.value)}
+                  placeholder="Nom (ex: Stockage)"
+                  className="input flex-1"
+                />
+                <input
+                  value={attr.value}
+                  onChange={(e) => updateAttribute(i, "value", e.target.value)}
+                  placeholder="Valeur (ex: 128 Go)"
+                  className="input flex-1"
+                />
+                <button type="button" onClick={() => removeAttribute(i)} className="shrink-0 text-white/40 hover:text-corail">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+
+            {suggestions.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {suggestions.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => addSuggestedAttribute(s)}
+                    className="text-xs rounded-full px-3 py-1.5 bg-white/[0.06] text-white/60 hover:bg-white/[0.1]"
+                  >
+                    + {s}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <button type="button" onClick={addCustomAttribute} className="flex items-center gap-1.5 text-xs text-ravinala">
+              <Plus className="h-3.5 w-3.5" /> Ajouter une caractéristique personnalisée
+            </button>
+          </div>
+
+          {/* Promotion / vente flash */}
+          <div className="rounded-2xl bg-white/[0.04] p-4">
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <input type="checkbox" checked={showPromo} onChange={(e) => setShowPromo(e.target.checked)} className="h-4 w-4 accent-corail" />
+              <span className="text-sm flex items-center gap-1.5">
+                <Zap className="h-3.5 w-3.5 text-corail" /> Mettre en promotion / vente flash
+              </span>
+            </label>
+
+            {showPromo && (
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                <Field label="Prix promo (Ar)">
+                  <input type="number" min={0} value={promoPrice} onChange={(e) => setPromoPrice(e.target.value)} className="input" />
+                </Field>
+                <Field label="Durée">
+                  <select value={promoDays} onChange={(e) => setPromoDays(e.target.value)} className="input">
+                    <option value="1">1 jour</option>
+                    <option value="3">3 jours</option>
+                    <option value="7">7 jours</option>
+                  </select>
+                </Field>
+              </div>
+            )}
           </div>
 
           <GlassButton type="submit" variant="primary" size="lg" className="w-full" isLoading={submitting} disabled={images.length === 0}>

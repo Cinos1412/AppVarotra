@@ -277,6 +277,20 @@ produit, qui ne faisait rien avant).
   répond. Si ça ne suffit pas, il faudra un retour précis (message
   d'erreur dans la console, comportement observé) pour aller plus loin.
 
+## Session du 14 juillet — gros lot de retours
+
+- **Compteur de vues** : ne s'incrémente plus quand le vendeur consulte son propre article (attendait aussi la résolution de l'auth pour éviter une course avant que `isOwnProduct` soit connu).
+- **Filtres de recherche** (`app/search/page.tsx` + `products.browse`) : catégorie, état, fourchette de prix, tri — utilisable même sans texte de recherche.
+- **Promotions / ventes flash** : `promoPrice`/`promoEndsAt` sur les produits, réglables depuis `/sell`, bannière dédiée sur l'accueil juste après les stories (`FlashSaleBanner`), badge + prix barré + décompte sur les fiches produit.
+- **Boost enfin visible + vrai paiement** : bouton sur le profil (à côté de "Modifier"). Le paiement passe maintenant par le même circuit Mobile Money que les achats (numéro marchand admin, référence, preuve, vérification Gemini) — `convex/boosts.ts` a été entièrement réécrit, ce n'était avant qu'une activation directe sans paiement réel.
+- **Conversation différée** : elle n'est plus créée dès qu'on clique "Acheter maintenant", mais seulement quand l'acheteur clique "J'ai effectué le virement" (`escrow.linkConversation`). `escrow.conversationId` est donc devenu optionnel dans le schéma.
+- **Suivi de commande façon Binance** : frise de progression (`StepTracker` dans `OrderStatusCard`), vocabulaire aligné ("Preuve envoyée", "Paiement confirmé", "Libéré").
+- **Stories** : nom/avatar du vendeur cliquable vers son profil ; boutons "Voir" et "Acheter" côte à côte sur l'article lié (au lieu d'une seule icône).
+- **Zoom sur les images produit** (`components/products/zoomable-image.tsx`) : double-tap et pincement (pinch) dans la vue plein écran, glisser pour déplacer une fois zoomé.
+- **Caractéristiques personnalisées par catégorie** : suggestions automatiques selon la catégorie (Tech → Stockage/RAM/Processeur..., Mode → Taille/Couleur/Matière...), plus possibilité d'ajouter des caractéristiques libres. Affichées en grille sur la fiche produit.
+- **Dashboard admin** : cartes cliquables (utilisateurs, produits, modération...), revenu des boosts ajouté aux stats, nouvelle page `/admin/logs` pour consulter le journal des actions.
+- **Palette sombre retravaillée** : trois paliers de profondeur (`ink` → `ink-soft` → `ink-elevated`) au lieu de deux, base légèrement plus froide/riche, halo ambiant repensé (bleu `ravinala` en dominante plutôt que vert néon) pour un rendu plus "Stripe/Linear" et moins plat.
+
 ## Corrections récentes (retours utilisateur)
 
 - **En-tête mobile manquant** : `Topbar` était `hidden md:block` sans

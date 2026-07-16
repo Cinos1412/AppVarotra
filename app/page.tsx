@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { StoryBar } from "@/components/stories/story-bar";
 import { ProductGrid } from "@/components/products/product-grid";
+import { FlashSaleBanner } from "@/components/products/flash-sale-banner";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/lib/use-current-user";
 
@@ -15,6 +16,7 @@ export default function HomePage() {
   return (
     <div className="space-y-6">
       <StoryBar />
+      <FlashSaleBanner currentUserId={userId ?? undefined} />
 
       <div className="flex gap-2 overflow-x-auto no-scrollbar">
         {CATEGORIES.map((cat) => (

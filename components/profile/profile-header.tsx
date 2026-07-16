@@ -135,6 +135,11 @@ export function ProfileHeader({ profile, currentUserId }: { profile: any; curren
                 <Pencil className="h-3.5 w-3.5" /> Modifier mon profil
               </GlassButton>
             </Link>
+            <Link href="/boost">
+              <GlassButton variant="primary">
+                <Zap className="h-3.5 w-3.5" /> {profile.boostActive ? "Actif" : "Booster"}
+              </GlassButton>
+            </Link>
             <GlassButton variant="glass" onClick={handleSignOut} isLoading={signingOut}>
               <LogOut className="h-3.5 w-3.5" />
             </GlassButton>

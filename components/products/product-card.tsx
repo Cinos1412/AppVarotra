@@ -2,10 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Heart, Star, Zap } from "lucide-react";
+import { Heart, Star, Zap, Eye } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { cn, formatAriary } from "@/lib/utils";
+import { cn, formatAriary, getActivePromo, formatCountdown } from "@/lib/utils";
 import { useState } from "react";
 
 export function ProductCard({ product, currentUserId }: { product: any; currentUserId?: string }) {
@@ -17,6 +17,7 @@ export function ProductCard({ product, currentUserId }: { product: any; currentU
   const [liked, setLiked] = useState<boolean | null>(null);
   const [count, setCount] = useState(product.likesCount);
   const isLiked = liked ?? alreadyReacted ?? false;
+  const promo = getActivePromo(product);
 
   async function handleLike(e: React.MouseEvent) {
     e.preventDefault();
@@ -37,11 +38,19 @@ export function ProductCard({ product, currentUserId }: { product: any; currentU
             className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
 
-          {product.isBoosted && (
-            <div className="absolute top-2.5 left-2.5 flex items-center gap-1 rounded-md bg-gradient-to-r from-vanille to-corail px-2 py-1 text-[10px] font-semibold text-ink tracking-wide">
-              <Zap className="h-3 w-3 fill-ink" /> BOOSTÉ
-            </div>
-          )}
+          {/* Badges empilés en haut à gauche — jamais plus de 2 à la fois */}
+          <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5 items-start">
+            {promo && (
+              <div className="flex items-center gap-1 rounded-md bg-corail px-2 py-1 text-[10px] font-semibold text-white tracking-wide">
+                <Zap className="h-3 w-3 fill-white" /> -{promo.discountPercent}%
+              </div>
+            )}
+            {product.isBoosted && (
+              <div className="flex items-center gap-1 rounded-md bg-gradient-to-r from-vanille to-corail px-2 py-1 text-[10px] font-semibold text-ink tracking-wide">
+                BOOSTÉ
+              </div>
+            )}
+          </div>
 
           <button
             onClick={handleLike}
@@ -50,12 +59,26 @@ export function ProductCard({ product, currentUserId }: { product: any; currentU
           >
             <Heart className={cn("h-4 w-4 transition-colors", isLiked ? "fill-corail text-corail" : "text-white")} />
           </button>
+
+          {promo && (
+            <div className="absolute bottom-2.5 left-2.5 rounded-md bg-black/60 backdrop-blur-md px-2 py-1 text-[10px] text-white">
+              {formatCountdown(promo.endsAt)}
+            </div>
+          )}
         </div>
 
         {/* Pied de carte opaque — contraste net façon Studio Premium, pas de flou sur le texte */}
         <div className="p-3.5 bg-ink-soft">
           <p className="text-[15px] font-medium text-white truncate">{product.title}</p>
-          <p className="font-display text-lg text-vanille mt-0.5">{formatAriary(product.price)}</p>
+
+          {promo ? (
+            <div className="flex items-baseline gap-2 mt-0.5">
+              <p className="font-display text-lg text-corail">{formatAriary(promo.promoPrice)}</p>
+              <p className="text-xs text-white/40 line-through">{formatAriary(product.price)}</p>
+            </div>
+          ) : (
+            <p className="font-display text-lg text-vanille mt-0.5">{formatAriary(product.price)}</p>
+          )}
 
           <div className="flex items-center justify-between mt-2 text-xs text-white/55">
             <span className="truncate">{product.location}</span>

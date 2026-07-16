@@ -76,7 +76,6 @@ function buildUssdDialCode(
 /** Étape 1 — l'acheteur valide son panier et choisit un opérateur. */
 export const initiate = mutation({
   args: {
-    conversationId: v.id("conversations"),
     productId: v.id("products"),
     buyerId: v.id("users"),
     sellerId: v.id("users"),
@@ -90,8 +89,7 @@ export const initiate = mutation({
 
     const commissionAmount = Math.round(args.amount * COMMISSION_RATE);
 
-    const escrowId = await ctx.db.insert("escrow", {
-      conversationId: args.conversationId,
+    return await ctx.db.insert("escrow", {
       productId: args.productId,
       buyerId: args.buyerId,
       sellerId: args.sellerId,
@@ -103,10 +101,19 @@ export const initiate = mutation({
       referenceCode: generateReferenceCode(),
       status: "awaiting_payment",
     });
+  },
+});
 
-    await ctx.db.patch(args.conversationId, { paymentStatus: "pending_payment" });
-
-    return escrowId;
+/**
+ * Appelée quand l'acheteur clique "J'ai effectué le virement" — c'est SEULEMENT
+ * à ce moment-là que la conversation avec le vendeur est créée (pas avant),
+ * pour éviter des fils de discussion vides pour des achats jamais tentés.
+ */
+export const linkConversation = mutation({
+  args: { escrowId: v.id("escrow"), conversationId: v.id("conversations") },
+  handler: async (ctx, { escrowId, conversationId }) => {
+    await ctx.db.patch(escrowId, { conversationId });
+    await ctx.db.patch(conversationId, { paymentStatus: "pending_payment" });
   },
 });
 
@@ -272,7 +279,9 @@ export const confirmEscrow = internalMutation({
     if (!escrow) return;
 
     await ctx.db.patch(escrowId, { status: "in_escrow", proofParsedAt: Date.now() });
-    await ctx.db.patch(escrow.conversationId, { paymentStatus: "in_escrow" });
+    if (escrow.conversationId) {
+      await ctx.db.patch(escrow.conversationId, { paymentStatus: "in_escrow" });
+    }
 
     await ctx.db.insert("notifications", {
       userId: escrow.sellerId,
@@ -347,7 +356,9 @@ async function releaseFundsInternal(ctx: any, escrowId: any) {
 
   const now = Date.now();
   await ctx.db.patch(escrowId, { status: "released", releasedAt: now });
-  await ctx.db.patch(escrow.conversationId, { paymentStatus: "released" });
+  if (escrow.conversationId) {
+    await ctx.db.patch(escrow.conversationId, { paymentStatus: "released" });
+  }
 
   const seller = await ctx.db.get(escrow.sellerId);
   if (seller) await ctx.db.patch(escrow.sellerId, { salesCount: seller.salesCount + 1 });
@@ -392,7 +403,9 @@ export const openDispute = mutation({
       disputeOpenedBy: userId,
       disputeOpenedAt: Date.now(),
     });
-    await ctx.db.patch(escrow.conversationId, { paymentStatus: "disputed" });
+    if (escrow.conversationId) {
+      await ctx.db.patch(escrow.conversationId, { paymentStatus: "disputed" });
+    }
   },
 });
 

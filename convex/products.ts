@@ -40,6 +40,16 @@ export const getById = query({
   },
 });
 
+export const flashSales = query({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const products = await ctx.db.query("products").withIndex("by_active_boosted", (q) => q.eq("isActive", true)).collect();
+    const onSale = products.filter((p) => p.promoPrice !== undefined && p.promoEndsAt !== undefined && p.promoEndsAt > now);
+    return await Promise.all(onSale.map(async (p) => ({ ...p, seller: await ctx.db.get(p.sellerId) })));
+  },
+});
+
 export const bySeller = query({
   args: { sellerId: v.id("users") },
   handler: async (ctx, { sellerId }) => {
@@ -49,6 +59,58 @@ export const bySeller = query({
       .order("desc")
       .collect();
     return products.filter((p) => p.isActive);
+  },
+});
+
+export const browse = query({
+  args: {
+    term: v.optional(v.string()),
+    category: v.optional(v.string()),
+    state: v.optional(v.string()),
+    location: v.optional(v.string()),
+    minPrice: v.optional(v.number()),
+    maxPrice: v.optional(v.number()),
+    sortBy: v.optional(v.union(v.literal("recent"), v.literal("price_asc"), v.literal("price_desc"), v.literal("popular"))),
+  },
+  handler: async (ctx, args) => {
+    let results;
+
+    if (args.term && args.term.trim()) {
+      results = await ctx.db
+        .query("products")
+        .withSearchIndex("search_title", (q) => q.search("title", args.term!).eq("isActive", true))
+        .take(200);
+    } else {
+      results = await ctx.db
+        .query("products")
+        .withIndex("by_active_boosted", (q) => q.eq("isActive", true))
+        .collect();
+    }
+
+    let filtered = results.filter((p) => {
+      if (args.category && p.category !== args.category) return false;
+      if (args.state && p.state !== args.state) return false;
+      if (args.location && !p.location.toLowerCase().includes(args.location.toLowerCase())) return false;
+      if (args.minPrice !== undefined && p.price < args.minPrice) return false;
+      if (args.maxPrice !== undefined && p.price > args.maxPrice) return false;
+      return true;
+    });
+
+    switch (args.sortBy) {
+      case "price_asc":
+        filtered = filtered.sort((a, b) => a.price - b.price);
+        break;
+      case "price_desc":
+        filtered = filtered.sort((a, b) => b.price - a.price);
+        break;
+      case "popular":
+        filtered = filtered.sort((a, b) => b.likesCount - a.likesCount);
+        break;
+      default:
+        filtered = filtered.sort((a, b) => b._creationTime - a._creationTime);
+    }
+
+    return await Promise.all(filtered.slice(0, 100).map(async (p) => ({ ...p, seller: await ctx.db.get(p.sellerId) })));
   },
 });
 
@@ -95,6 +157,9 @@ export const insertProduct = internalMutation({
     ),
     location: v.string(),
     images: v.array(v.string()),
+    attributes: v.optional(v.array(v.object({ key: v.string(), value: v.string() }))),
+    promoPrice: v.optional(v.number()),
+    promoEndsAt: v.optional(v.number()),
     moderationStatus: v.union(v.literal("approved"), v.literal("flagged_for_review")),
     moderationReason: v.optional(v.string()),
   },
@@ -139,6 +204,9 @@ export const createModerated = action({
     ),
     location: v.string(),
     images: v.array(v.string()),
+    attributes: v.optional(v.array(v.object({ key: v.string(), value: v.string() }))),
+    promoPrice: v.optional(v.number()),
+    promoEndsAt: v.optional(v.number()),
   },
   handler: async (ctx, args): Promise<any> => {
     const moderation = await ctx.runAction(internal.moderation.checkProductContent, {
@@ -196,6 +264,9 @@ export const update = mutation({
     ),
     location: v.string(),
     images: v.array(v.string()),
+    attributes: v.optional(v.array(v.object({ key: v.string(), value: v.string() }))),
+    promoPrice: v.optional(v.number()),
+    promoEndsAt: v.optional(v.number()),
   },
   handler: async (ctx, { productId, sellerId, ...patch }) => {
     const product = await ctx.db.get(productId);

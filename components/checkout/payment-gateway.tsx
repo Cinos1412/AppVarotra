@@ -18,13 +18,11 @@ const OPERATORS = [
 type Step = "choose_operator" | "instructions" | "submit_proof" | "verifying" | "in_escrow";
 
 export function PaymentGateway({
-  conversationId,
   productId,
   buyerId,
   sellerId,
   amount,
 }: {
-  conversationId: string;
   productId: string;
   buyerId: string;
   sellerId: string;
@@ -33,12 +31,38 @@ export function PaymentGateway({
   const [step, setStep] = useState<Step>("choose_operator");
   const [operator, setOperator] = useState<(typeof OPERATORS)[number]["id"] | null>(null);
   const [escrowId, setEscrowId] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [transactionId, setTransactionId] = useState("");
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
   const [justReturned, setJustReturned] = useState(false);
+  const [linkingConversation, setLinkingConversation] = useState(false);
   const leftToDialRef = useRef(false);
+
+  const getOrCreateConversation = useMutation(api.conversations.getOrCreate);
+  const linkConversation = useMutation(api.escrow.linkConversation);
+
+  /**
+   * Le moment "j'ai payé" — c'est SEULEMENT ici que la conversation avec le
+   * vendeur est créée, pas dès qu'on ouvre le checkout. Évite les fils de
+   * discussion vides pour des achats juste regardés puis abandonnés.
+   */
+  async function handleConfirmPaid() {
+    if (!escrowId) return;
+    if (!conversationId) {
+      setLinkingConversation(true);
+      const convId = await getOrCreateConversation({
+        buyerId: buyerId as any,
+        sellerId: sellerId as any,
+        productId: productId as any,
+      });
+      await linkConversation({ escrowId: escrowId as any, conversationId: convId });
+      setConversationId(convId);
+      setLinkingConversation(false);
+    }
+    setStep("submit_proof");
+  }
 
   // Détecte le retour dans l'app après avoir composé le code (l'onglet perd
   // le focus quand le composeur téléphone s'ouvre par-dessus). On ne peut
@@ -51,7 +75,7 @@ export function PaymentGateway({
       } else if (leftToDialRef.current && step === "instructions") {
         leftToDialRef.current = false;
         setJustReturned(true);
-        setStep("submit_proof");
+        handleConfirmPaid();
       }
     }
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -71,7 +95,6 @@ export function PaymentGateway({
   async function handleChooseOperator(op: (typeof OPERATORS)[number]["id"]) {
     setOperator(op);
     const id = await initiate({
-      conversationId: conversationId as any,
       productId: productId as any,
       buyerId: buyerId as any,
       sellerId: sellerId as any,
@@ -205,7 +228,7 @@ export function PaymentGateway({
             une fois fait.
           </p>
 
-          <GlassButton variant="primary" className="w-full" onClick={() => setStep("submit_proof")}>
+          <GlassButton variant="primary" className="w-full" onClick={handleConfirmPaid} isLoading={linkingConversation}>
             J'ai effectué le virement
           </GlassButton>
         </div>
@@ -275,6 +298,11 @@ export function PaymentGateway({
             Le vendeur a été notifié. Les fonds seront versés dès que tu confirmeras la réception
             de ton article — ou automatiquement 24h après la livraison.
           </p>
+          {conversationId && (
+            <a href={`/messages/${conversationId}`} className="text-ravinala text-sm font-medium">
+              Voir la conversation →
+            </a>
+          )}
         </div>
       )}
     </GlassPanel>

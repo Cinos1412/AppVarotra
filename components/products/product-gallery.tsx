@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { ZoomableImage } from "./zoomable-image";
 import { X, ChevronLeft, ChevronRight, Expand } from "lucide-react";
 
 export function ProductGallery({ images, title }: { images: string[]; title: string }) {
@@ -81,7 +82,7 @@ export function ProductGallery({ images, title }: { images: string[]; title: str
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
-            <Image src={images[active]} alt={title} fill className="object-contain" />
+            <ZoomableImage key={active} src={images[active]} alt={title} />
 
             {images.length > 1 && (
               <>

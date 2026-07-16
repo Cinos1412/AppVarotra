@@ -8,11 +8,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { GlassButton } from "@/components/ui/glass-button";
 import { PremiumCard } from "@/components/ui/premium-card";
-import { StatChip } from "@/components/ui/stat-chip";
+import { formatAriary, cn, getActivePromo } from "@/lib/utils";
 import { ProductGallery } from "@/components/products/product-gallery";
 import { SimilarProducts } from "@/components/products/similar-products";
 import { ProductReviews } from "@/components/products/product-reviews";
-import { formatAriary, cn } from "@/lib/utils";
 import { Star, MapPin, ShieldCheck, Heart, Share2, Flag, MessageCircle, ChevronDown, Eye, Pencil, Trash2 } from "lucide-react";
 import { useCurrentUser } from "@/lib/use-current-user";
 import { BackButton } from "@/components/ui/back-button";
@@ -20,7 +19,7 @@ import { BackButton } from "@/components/ui/back-button";
 export default function ProductPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { userId } = useCurrentUser();
+  const { userId, isLoading: isUserLoading } = useCurrentUser();
   const product = useQuery(api.products.getById, { productId: params.id as any });
   const addToCart = useMutation(api.cart.addItem);
   const toggleReaction = useMutation(api.products.toggleReaction);
@@ -54,28 +53,25 @@ export default function ProductPage() {
   );
 
   const isOwnProduct = !!product && !!userId && product.sellerId === userId;
+  const promo = product ? getActivePromo(product) : null;
 
   const [liked, setLiked] = useState<boolean | null>(null);
   const [descExpanded, setDescExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const isLiked = liked ?? alreadyReacted ?? false;
 
-  // Une seule fois par visite, pas à chaque re-render / changement de state local.
+  // Une seule fois par visite, pas à chaque re-render / changement de state
+  // local — et jamais si c'est le vendeur qui consulte son propre article.
   useEffect(() => {
-    if (product && !hasCountedView.current) {
+    if (product && !hasCountedView.current && !isUserLoading && !isOwnProduct) {
       hasCountedView.current = true;
       incrementViews({ productId: product._id });
     }
-  }, [product, incrementViews]);
+  }, [product, incrementViews, isOwnProduct, isUserLoading]);
 
-  async function handleBuyNow() {
+  function handleBuyNow() {
     if (!userId || !product) return;
-    const conversationId = await getOrCreateConversation({
-      buyerId: userId as any,
-      sellerId: product.sellerId,
-      productId: product._id,
-    });
-    router.push(`/checkout?conversationId=${conversationId}&productId=${product._id}`);
+    router.push(`/checkout?productId=${product._id}`);
   }
 
   async function handleContactSeller() {
@@ -164,10 +160,32 @@ export default function ProductPage() {
                 </button>
               </div>
             </div>
-            <p className="font-display text-3xl text-vanille mt-1.5">{formatAriary(product.price)}</p>
+
+            {promo ? (
+              <div className="flex items-baseline gap-2.5 mt-1.5">
+                <p className="font-display text-3xl text-corail">{formatAriary(promo.promoPrice)}</p>
+                <p className="text-base text-white/40 line-through">{formatAriary(product.price)}</p>
+                <span className="text-xs bg-corail/15 text-corail rounded-full px-2 py-0.5 font-medium">-{promo.discountPercent}%</span>
+              </div>
+            ) : (
+              <p className="font-display text-3xl text-vanille mt-1.5">{formatAriary(product.price)}</p>
+            )}
+
+            {/* Stats compactes — directement liées à l'identité de l'annonce, donc juste sous le prix */}
+            <div className="flex items-center gap-4 mt-2.5 text-sm text-white/50">
+              <span className="flex items-center gap-1.5">
+                <Eye className="h-3.5 w-3.5" /> {product.views}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Heart className="h-3.5 w-3.5" /> {product.likesCount}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Star className="h-3.5 w-3.5 fill-vanille text-vanille" /> {product.ratingAvg.toFixed(1)} ({product.ratingCount})
+              </span>
+            </div>
           </div>
 
-          {/* Chips d'info rapide */}
+          {/* Chips d'attributs — état, lieu, catégorie */}
           <div className="flex flex-wrap gap-2">
             <span className="flex items-center gap-1.5 text-xs bg-white/[0.06] rounded-full px-3 py-1.5 text-white/70">
               <MapPin className="h-3 w-3" /> {product.location}
@@ -176,12 +194,20 @@ export default function ProductPage() {
             <span className="text-xs bg-white/[0.06] rounded-full px-3 py-1.5 text-white/70">{product.category}</span>
           </div>
 
-          {/* Stats — chips façon dashboard, pas de glass ici */}
-          <div className="flex flex-wrap gap-2.5">
-            <StatChip icon={Eye} value={product.views} label="vues" tone="neutral" />
-            <StatChip icon={Heart} value={product.likesCount} label="j'aime" tone="corail" />
-            <StatChip icon={Star} value={product.ratingAvg.toFixed(1)} label={`(${product.ratingCount})`} tone="vanille" />
-          </div>
+          {/* Caractéristiques personnalisées — Taille/RAM/etc. selon la catégorie */}
+          {product.attributes && product.attributes.length > 0 && (
+            <PremiumCard className="p-5">
+              <h2 className="text-sm font-medium text-white/60 mb-3">Caractéristiques</h2>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                {product.attributes.map((attr: { key: string; value: string }, i: number) => (
+                  <div key={i} className="flex flex-col">
+                    <span className="text-[11px] text-white/40">{attr.key}</span>
+                    <span className="text-sm text-white/85">{attr.value}</span>
+                  </div>
+                ))}
+              </div>
+            </PremiumCard>
+          )}
 
           {/* Description — carte premium solide, pas de glass */}
           <PremiumCard className="p-5">

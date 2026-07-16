@@ -51,13 +51,18 @@ export const dashboardStats = query({
   handler: async (ctx) => {
     await requireAdmin(ctx);
 
-    const [users, products, escrows, reportsPending, disputesOpen] = await Promise.all([
+    const [users, products, escrows, reportsPending, disputesOpen, boosts] = await Promise.all([
       ctx.db.query("users").collect(),
       ctx.db.query("products").collect(),
       ctx.db.query("escrow").collect(),
       ctx.db.query("reports").withIndex("by_status", (q) => q.eq("status", "pending")).collect(),
       ctx.db.query("escrow").withIndex("by_status", (q) => q.eq("status", "disputed")).collect(),
+      ctx.db.query("boosts").collect(),
     ]);
+
+    const boostRevenue = boosts
+      .filter((b) => b.status === "active" || b.status === "expired")
+      .reduce((sum, b) => sum + b.price, 0);
 
     const releasedEscrows = escrows.filter((e) => e.status === "released");
     const gmv = releasedEscrows.reduce((sum, e) => sum + e.amount, 0);
@@ -85,6 +90,7 @@ export const dashboardStats = query({
       totalProducts: products.filter((p) => p.isActive).length,
       gmv,
       commissionEarned,
+      boostRevenue,
       pendingModeration: flaggedProducts.length,
       pendingReports: reportsPending.length,
       openDisputes: disputesOpen.length,
@@ -260,6 +266,15 @@ export const setAdmin = mutation({
 // -------------------------------------------------------------------------
 // Produits — vue complète admin (pas juste les flaggés)
 // -------------------------------------------------------------------------
+export const actionLog = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const actions = await ctx.db.query("adminActions").order("desc").take(100);
+    return await Promise.all(actions.map(async (a) => ({ ...a, admin: await ctx.db.get(a.adminId) })));
+  },
+});
+
 export const allProducts = query({
   args: { search: v.optional(v.string()) },
   handler: async (ctx, { search }) => {
