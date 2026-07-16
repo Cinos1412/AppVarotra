@@ -7,16 +7,16 @@ const AUTO_RELEASE_DELAY_MS = 24 * 60 * 60 * 1000; // 24h, conformément aux CGU
 
 // Numéro marchand affiché à l'utilisateur (avec espaces, lisible)
 const MERCHANT_NUMBERS = {
-  mvola: "034 00 000 01",
-  orange_money: "032 00 000 01",
-  airtel_money: "033 00 000 01",
+  mvola: "034 42 111 93",
+  orange_money: "037 63 639 11",
+  airtel_money: "033 26 512 43",
 } as const;
 
 // Même numéro, sans espaces — nécessaire pour composer la chaîne USSD
 const MERCHANT_NUMBERS_RAW = {
-  mvola: "0340000001",
-  orange_money: "0320000001",
-  airtel_money: "0330000001",
+  mvola: "0344211193",
+  orange_money: "0376363911",
+  airtel_money: "0332651243",
 } as const;
 
 /**
@@ -67,7 +67,7 @@ function buildUssdDialCode(
     case "mvola":
       return { code: `#111*1*2*${merchant}*${amount}*1*${description}#`, verified: true };
     case "orange_money":
-      return { code: `#144*1*1*${merchant}*${amount}*${description}#`, verified: false };
+      return { code: `#144*1*1*${merchant}*${merchant}*${amount}*#`, verified: true };
     case "airtel_money":
       return { code: `*436*2*1*1*${merchant}*${amount}*${description}#`, verified: false };
   }
