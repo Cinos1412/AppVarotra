@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { Topbar } from "@/components/layout/topbar";
 import { MobileHeader } from "@/components/layout/mobile-header";
+import { Analytics } from "@vercel/analytics/next";
 
 const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces", weight: ["500", "600"] });
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta" });
@@ -37,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <BottomNav />
           </Providers>
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
